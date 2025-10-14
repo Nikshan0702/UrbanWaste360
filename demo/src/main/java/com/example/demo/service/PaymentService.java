@@ -11,6 +11,5 @@ import com.example.demo.dto.WalletResponse;
 public interface PaymentService {
     PaymentResponse processPayment(PaymentRequest request);
     WalletResponse getWalletBalance(String userId);
-    WalletResponse addToWallet(String userId, BigDecimal amount);
     List<PaymentHistoryResponse> getPaymentHistory(String userId);
 }

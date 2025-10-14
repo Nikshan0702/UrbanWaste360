@@ -44,13 +44,6 @@ public class PaymentController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/wallet/{userId}/add")
-    public ResponseEntity<WalletResponse> addToWallet(
-            @PathVariable String userId,
-            @RequestParam BigDecimal amount) {
-        WalletResponse response = paymentService.addToWallet(userId, amount);
-        return ResponseEntity.ok(response);
-    }
 
     @GetMapping("/history/{userId}")
     public ResponseEntity<List<PaymentHistoryResponse>> getPaymentHistory(@PathVariable String userId) {

@@ -157,24 +157,22 @@ public class UserController {
         this.userService = userService;
     }
     
-    // FIXED: Get current user profile with proper authentication handling
+    // Get current user profile - works with actual users from database
     @GetMapping("/profile")
-    public ResponseEntity<?> getCurrentUserProfile() {
+    public ResponseEntity<?> getCurrentUserProfile(@RequestParam(required = false) String email) {
         try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            
-            if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not authenticated");
+            // If email is provided, get that specific user
+            if (email != null && !email.isEmpty()) {
+                User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+                return ResponseEntity.ok(user);
             }
             
-            String email = authentication.getName();
-            System.out.println("Fetching profile for user: " + email);
+            // If no email provided, get the first user from database (for demo)
+            User firstUser = userRepository.findAll().stream().findFirst()
+                .orElseThrow(() -> new RuntimeException("No users found in database"));
             
-            User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
-            
-            System.out.println("User found: " + user.getEmail());
-            return ResponseEntity.ok(user);
+            return ResponseEntity.ok(firstUser);
             
         } catch (Exception e) {
             System.out.println("Error in getCurrentUserProfile: " + e.getMessage());

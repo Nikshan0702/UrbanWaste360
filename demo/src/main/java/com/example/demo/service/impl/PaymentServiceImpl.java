@@ -17,16 +17,21 @@ import com.example.demo.model.PaymentStatus;
 import com.example.demo.repository.PaymentRepository;
 import com.example.demo.service.PaymentService;
 import com.example.demo.service.WalletService;
+import com.example.demo.service.payment.PaymentProcessorFactory;
 
 @Service
 public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final WalletService walletService;
+    private final PaymentProcessorFactory paymentProcessorFactory;
 
-    public PaymentServiceImpl(PaymentRepository paymentRepository, WalletService walletService) {
+    public PaymentServiceImpl(PaymentRepository paymentRepository, 
+                            WalletService walletService,
+                            PaymentProcessorFactory paymentProcessorFactory) {
         this.paymentRepository = paymentRepository;
         this.walletService = walletService;
+        this.paymentProcessorFactory = paymentProcessorFactory;
     }
 
     @Override
@@ -36,23 +41,11 @@ public class PaymentServiceImpl implements PaymentService {
             // Create payment
             Payment payment = new Payment(request.getUserId(), request.getAmount(), request.getPaymentMethod());
 
-            // Handle different payment methods
-            if (request.getPaymentMethod() == PaymentMethod.WALLET) {
-                if (!walletService.hasSufficientBalance(request.getUserId(), request.getAmount())) {
-                    payment.setStatus(PaymentStatus.FAILED);
-                    paymentRepository.save(payment);
-                    throw new RuntimeException("Insufficient wallet balance");
-                }
-                
-                walletService.updateWalletBalance(request.getUserId(), request.getAmount().negate());
-                payment.setStatus(PaymentStatus.COMPLETED);
-                
-            } else {
-                // For CARD and CASH - always successful in demo
-                payment.setStatus(PaymentStatus.COMPLETED);
-            }
-
-            Payment savedPayment = paymentRepository.save(payment);
+            // Process payment using appropriate processor
+            Payment processedPayment = paymentProcessorFactory.processPayment(payment, request);
+            
+            // Save the processed payment
+            Payment savedPayment = paymentRepository.save(processedPayment);
 
             return new PaymentResponse(
                 savedPayment.getId(),
@@ -73,33 +66,20 @@ public class PaymentServiceImpl implements PaymentService {
         return walletService.getWalletBalance(userId);
     }
 
-    @Override
-    @Transactional
-    public WalletResponse addToWallet(String userId, BigDecimal amount) {
-        // This adds money to wallet (for waste selling income)
-        WalletResponse walletResponse = walletService.updateWalletBalance(userId, amount);
-        
-        // Create a payment record for the wallet top-up
-        Payment payment = new Payment(userId, amount, PaymentMethod.WALLET);
-        payment.setStatus(PaymentStatus.COMPLETED);
-        paymentRepository.save(payment);
-        
-        return walletResponse;
-    }
 
     @Override
     public List<PaymentHistoryResponse> getPaymentHistory(String userId) {
         List<Payment> payments = paymentRepository.findByUserIdOrderByCreatedAtDesc(userId);
         
         return payments.stream().map(payment -> {
-            String type = "payment";
+            String type = "expense";
             String description = payment.getPaymentMethod() + " Payment";
             
             // If it's a wallet top-up (positive amount), change the type and description
             if (payment.getAmount().compareTo(BigDecimal.ZERO) > 0 && 
                 payment.getPaymentMethod() == PaymentMethod.WALLET) {
                 type = "income";
-                description = "Wallet Top-up";
+                description = "Waste Selling Income";
             }
             
             return new PaymentHistoryResponse(

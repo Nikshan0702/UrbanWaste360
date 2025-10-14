@@ -1,20 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const PaymentDetailsPage = () => {
-  // const [selectedMethod, setSelectedMethod] = useState('wallet');
-  // const [walletBalance, setWalletBalance] = useState(1250.75);
-  // const [totalAmount, setTotalAmount] = useState(899.99);
-  // const [cardDetails, setCardDetails] = useState({
-  //   cardNumber: '',
-  //   expiryDate: '',
-  //   cvv: '',
-  //   cardHolder: ''
-  // });
+  const [selectedMethod, setSelectedMethod] = useState('wallet');
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [totalAmount, setTotalAmount] = useState('');
+  const [cardDetails, setCardDetails] = useState({
+    cardNumber: '',
+    expiryDate: '',
+    cvv: '',
+    cardHolder: ''
+  });
+  const [userId, setUserId] = useState('user123'); // You can get this from auth context
 
-  // const paymentMethods = [
-  //   { id: 'wallet', name: 'Wallet Balance', icon: '💼' },
-  //   { id: 'card', name: 'Credit/Debit Card', icon: '💳' },
-  // ];
+  const paymentMethods = [
+    { id: 'wallet', name: 'Wallet Balance', icon: '💼' },
+    { id: 'card', name: 'Credit/Debit Card', icon: '💳' },
+  ];
+
+  // Fetch wallet balance on component mount
+  useEffect(() => {
+    fetchWalletBalance();
+  }, []);
+
+  const fetchWalletBalance = async () => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/payments/wallet/${userId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setWalletBalance(data.balance || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching wallet balance:', error);
+    }
+  };
 
   const handleCardInputChange = (field, value) => {
     setCardDetails(prev => ({
@@ -23,8 +41,56 @@ const PaymentDetailsPage = () => {
     }));
   };
 
-  const handlePayment = () => {
-    alert(`Payment processing with ${selectedMethod}`);
+  const handlePayment = async () => {
+    if (!totalAmount || parseFloat(totalAmount) <= 0) {
+      alert('Please enter a valid amount');
+      return;
+    }
+
+    if (selectedMethod === 'card' && (!cardDetails.cardNumber || !cardDetails.cardHolder)) {
+      alert('Please fill in all card details');
+      return;
+    }
+
+    try {
+      const paymentData = {
+        userId: userId,
+        amount: parseFloat(totalAmount),
+        paymentMethod: selectedMethod.toUpperCase(),
+        cardDetails: selectedMethod === 'card' ? cardDetails : null
+      };
+
+      const response = await fetch('http://localhost:8080/api/payments/process', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(paymentData)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`Payment successful! Payment ID: ${result.paymentId}`);
+        
+        // Refresh wallet balance
+        await fetchWalletBalance();
+        
+        // Reset form
+        setTotalAmount('');
+        setCardDetails({
+          cardNumber: '',
+          expiryDate: '',
+          cvv: '',
+          cardHolder: ''
+        });
+      } else {
+        const error = await response.text();
+        alert(`Payment failed: ${error}`);
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      alert('Payment failed. Please try again.');
+    }
   };
 
   return (
@@ -46,9 +112,9 @@ const PaymentDetailsPage = () => {
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="text-green-100 text-sm">Available Balance</p>
-                    <p className="text-3xl font-bold mt-2">${walletBalance.toFixed(2)}</p>
+                    <p className="text-3xl font-bold mt-2">LKR {walletBalance.toFixed(2)}</p>
                     <p className="text-green-100 text-xs mt-2">
-                      After payment: ${(walletBalance - totalAmount).toFixed(2)}
+                      After payment: LKR {(walletBalance - (totalAmount ? parseFloat(totalAmount) : 0)).toFixed(2)}
                     </p>
                   </div>
                   <div className="text-4xl">💼</div>
@@ -72,23 +138,34 @@ const PaymentDetailsPage = () => {
 
             {/* Order Summary */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Order Summary</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Payment Amount</h2>
+              
+              {/* Amount Input */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Enter Amount (LKR)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  placeholder="Enter amount to pay"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  value={totalAmount}
+                  onChange={(e) => setTotalAmount(e.target.value)}
+                />
+              </div>
+
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Subtotal</span>
-                  <span className="text-gray-900">${totalAmount.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Shipping</span>
-                  <span className="text-gray-900">$0.00</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Tax</span>
-                  <span className="text-gray-900">$89.99</span>
+                  <span className="text-gray-600">Service Fee</span>
+                  <span className="text-gray-900">LKR 0.00</span>
                 </div>
                 <div className="flex justify-between text-base font-semibold pt-3 border-t border-gray-100">
                   <span className="text-gray-900">Total Amount</span>
-                  <span className="text-green-600">${totalAmount.toFixed(2)}</span>
+                  <span className="text-green-600">
+                    LKR {totalAmount ? parseFloat(totalAmount).toFixed(2) : '0.00'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -208,9 +285,10 @@ const PaymentDetailsPage = () => {
             {/* Pay Button */}
             <button
               onClick={handlePayment}
-              className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-semibold text-base transition-colors duration-200 mt-6 shadow-sm"
+              disabled={!totalAmount || parseFloat(totalAmount) <= 0}
+              className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-3 px-4 rounded-lg font-semibold text-base transition-colors duration-200 mt-6 shadow-sm"
             >
-              Pay ${totalAmount.toFixed(2)}
+              Pay LKR {totalAmount ? parseFloat(totalAmount).toFixed(2) : '0.00'}
             </button>
 
             {/* Security Note */}

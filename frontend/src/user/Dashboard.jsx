@@ -529,34 +529,57 @@
 // export default Dashboard;
 
 import React, { useState, useEffect } from 'react';
+import { 
+  FaWallet, 
+  FaMoneyBillWave, 
+  FaCreditCard, 
+  FaHistory, 
+  FaRecycle, 
+  FaTrash, 
+  FaPaperPlane, 
+  FaCog, 
+  FaUser, 
+  FaSignOutAlt,
+  FaCheckCircle,
+  FaTimesCircle,
+  FaClock,
+  FaShieldAlt,
+  FaChartLine,
+  FaCalendarAlt,
+  FaFileAlt
+} from 'react-icons/fa';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [userData, setUserData] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const [selectedMethod, setSelectedMethod] = useState('wallet');
-  const [walletBalance, setWalletBalance] = useState(1250.75);
-  const [totalAmount, setTotalAmount] = useState(899.99);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [totalAmount, setTotalAmount] = useState('');
   const [cardDetails, setCardDetails] = useState({
     cardNumber: '',
     expiryDate: '',
     cvv: '',
     cardHolder: ''
   });
+  
+  // Waste selling state
+  const [wasteAmount, setWasteAmount] = useState('');
+  const [wasteType, setWasteType] = useState('plastic');
+  const [loading, setLoading] = useState(false);
 
 
   const paymentMethods = [
     { 
       id: 'wallet', 
       name: 'Wallet Balance', 
-      icon: '💼'
+      icon: FaWallet
     },
     { 
       id: 'card', 
       name: 'Credit/Debit Card', 
-      icon: '💳'
+      icon: FaCreditCard
     }
   ];
 
@@ -624,37 +647,136 @@ const fetchPaymentHistory = async () => {
   }
 };
 
-const handlePayment = async () => {
-  try {
+
+  const [userId, setUserId] = useState('user123'); // You can get this from auth context
+
+
+  // Fetch wallet balance on component mount
+  useEffect(() => {
+    fetchWalletBalance();
+  }, []);
+
+  // const fetchWalletBalance = async () => {
+  //   try {
+  //     const response = await fetch(`http://localhost:8080/api/payments/wallet/${userId}`);
+  //     if (response.ok) {
+  //       const data = await response.json();
+  //       setWalletBalance(data.balance || 0);
+  //     }
+  //   } catch (error) {
+  //     console.error('Error fetching wallet balance:', error);
+  //   }
+  // };
+
+  const handleCardInputChange = (field, value) => {
+    setCardDetails(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handlePayment = async () => {
+    if (!totalAmount || parseFloat(totalAmount) <= 0) {
+      alert('Please enter a valid amount');
+      return;
+    }
+
+    if (selectedMethod === 'card' && (!cardDetails.cardNumber || !cardDetails.cardHolder)) {
+      alert('Please fill in all card details');
+      return;
+    }
+
+    try {
       const paymentData = {
-          amount: paymentAmount,
-          currency: 'USD',
-          paymentMethod: 'CARD', // This should work now
-          userId: currentUser.id
+        userId: userId,
+        amount: parseFloat(totalAmount),
+        paymentMethod: selectedMethod.toUpperCase(),
+        cardDetails: selectedMethod === 'card' ? cardDetails : null
       };
 
-      const response = await fetch('/api/payments/process', {
-          method: 'POST',
-          headers: {
-              'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(paymentData)
+      const response = await fetch('http://localhost:8080/api/payments/process', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(paymentData)
       });
 
-      if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Payment failed');
+      if (response.ok) {
+        const result = await response.json();
+        alert(`Payment successful! Payment ID: ${result.paymentId}`);
+        
+        // Refresh wallet balance and payment history
+        await fetchWalletBalance();
+        await fetchPaymentHistory();
+        
+        // Reset form
+        setTotalAmount('');
+        setCardDetails({
+          cardNumber: '',
+          expiryDate: '',
+          cvv: '',
+          cardHolder: ''
+        });
+      } else {
+        const error = await response.text();
+        alert(`Payment failed: ${error}`);
       }
-
-      const result = await response.json();
-      console.log('Payment successful:', result);
-      // Show success message or redirect
-      
-  } catch (error) {
+    } catch (error) {
       console.error('Payment error:', error);
-      // Show error message to user
-  }
-};
+      alert('Payment failed. Please try again.');
+    }
+  };
+
+  // Waste selling functions
+  const handleSellWaste = async () => {
+    if (!wasteAmount || parseFloat(wasteAmount) <= 0) {
+      alert('Please enter a valid amount');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`http://localhost:8080/api/waste/sell/${userId}?amount=${wasteAmount}&wasteType=${wasteType}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`Waste sold successfully! Added LKR ${wasteAmount} to your wallet.`);
+        
+        // Refresh wallet balance and payment history
+        await fetchWalletBalance();
+        await fetchPaymentHistory();
+        
+        // Reset form
+        setWasteAmount('');
+      } else {
+        const error = await response.text();
+        alert(`Failed to sell waste: ${error}`);
+      }
+    } catch (error) {
+      console.error('Error selling waste:', error);
+      alert('Failed to sell waste. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateEstimatedValue = () => {
+    const wasteTypes = [
+      { value: 'plastic', price: 50 },
+      { value: 'paper', price: 30 },
+      { value: 'metal', price: 80 },
+      { value: 'glass', price: 40 },
+      { value: 'organic', price: 20 }
+    ];
+    const selectedWaste = wasteTypes.find(w => w.value === wasteType);
+    return selectedWaste ? parseFloat(wasteAmount || 0) * selectedWaste.price : 0;
+  };
 
   // Debug: Check what's in localStorage
   useEffect(() => {
@@ -682,40 +804,48 @@ const handlePayment = async () => {
 
   const fetchUserData = async () => {
     try {
-      const token = localStorage.getItem('authToken');
+      console.log('📡 Fetching user profile...');
       
-      if (!token) {
-        setError('No authentication token found. Please login again.');
-        setLoading(false);
-        return;
+      // Try to get user from localStorage first
+      const storedUserData = localStorage.getItem('userData');
+      if (storedUserData) {
+        try {
+          const parsedData = JSON.parse(storedUserData);
+          console.log('✅ Using stored user data:', parsedData);
+          setUserData(parsedData);
+          setUserId(parsedData.id || parsedData.email); // Use ID or email as fallback
+          return;
+        } catch (e) {
+          console.error('❌ Error parsing stored user data:', e);
+        }
       }
 
-      console.log('🔑 Using token:', token);
-
-      // Try the main profile endpoint
+      // If no stored data, fetch from API
       const response = await fetch('http://localhost:8080/api/users/profile', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         }
       });
 
       console.log('📡 Profile response status:', response.status);
 
       if (response.ok) {
-        const userDataFromAPI = await response.json();
-        console.log('✅ User data from API:', userDataFromAPI);
-        setUserData(userDataFromAPI);
-        setError('');
+        const userData = await response.json();
+        console.log('✅ Profile data received:', userData);
+        setUserData(userData);
+        setUserId(userData.id || userData.email); // Use ID or email as fallback
+        
+        // Store in localStorage for future use
+        localStorage.setItem('userData', JSON.stringify(userData));
       } else {
         const errorText = await response.text();
         console.error('❌ Profile endpoint error:', errorText);
-        setError(`Server error: ${errorText}`);
+        setError('Failed to load user profile: ' + errorText);
       }
     } catch (error) {
-      console.error('💥 Network error:', error);
-      setError('Network error: ' + error.message);
+      console.error('❌ Error fetching user data:', error);
+      setError('Failed to connect to server');
     } finally {
       setLoading(false);
     }
@@ -733,12 +863,7 @@ const handlePayment = async () => {
     window.location.href = '/';
   };
 
-  const handleCardInputChange = (field, value) => {
-    setCardDetails(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
+
 
   // const handlePayment = () => {
   //   alert(`Payment processing with ${selectedMethod}`);
@@ -893,539 +1018,365 @@ const handlePayment = async () => {
         );
         
       case 'payments':
-        // return (
-        //   <div className="space-y-6">
-        //     {/* Financial Overview Cards */}
-        //     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        //       {/* Wallet Balance */}
-        //       <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl shadow-lg p-6 text-white">
-        //         <div className="flex items-center justify-between">
-        //           <div>
-        //             <p className="text-emerald-100 text-sm font-medium">Wallet Balance</p>
-        //             <p className="text-3xl font-bold mt-2">LKR {walletBalance.toFixed(2)}</p>
-        //             <p className="text-emerald-100 text-xs mt-2">Available for payments</p>
-        //           </div>
-        //         </div>
-        //       </div>
-
-        //       {/* Total Income */}
-        //       <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg p-6 text-white">
-        //         <div className="flex items-center justify-between">
-        //           <div>
-        //             <p className="text-blue-100 text-sm font-medium">Total Income</p>
-        //             <p className="text-3xl font-bold mt-2">LKR {totalIncome.toFixed(2)}</p>
-        //             <p className="text-blue-100 text-xs mt-2">From waste sales</p>
-        //           </div>
-
-        //         </div>
-        //       </div>
-
-        //       {/* Total Payments */}
-        //       <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg p-6 text-white">
-        //         <div className="flex items-center justify-between">
-        //           <div>
-        //             <p className="text-purple-100 text-sm font-medium">Total Payments</p>
-        //             <p className="text-3xl font-bold mt-2">LKR {totalPayments.toFixed(2)}</p>
-        //             <p className="text-purple-100 text-xs mt-2">Service fees paid</p>
-        //           </div>
-                
-        //         </div>
-        //       </div>
-        //     </div>
-
-        //     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        //       {/* Payment Method Section */}
-        //       <div className="space-y-6">
-        //         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-        //           <h2 className="text-xl font-bold text-gray-800 mb-6">Make Payment</h2>
-                  
-        //           {/* Order Summary */}
-        //           <div className="bg-gray-50 rounded-xl p-4 mb-6">
-        //             <h3 className="font-semibold text-gray-700 mb-3">Order Summary</h3>
-        //             <div className="space-y-2">
-        //               <div className="flex justify-between text-sm">
-        //                 <span className="text-gray-600">Waste Collection Fee</span>
-        //                 <span className="text-gray-800">LKR 810.00</span>
-        //               </div>
-        //               <div className="flex justify-between text-sm">
-        //                 <span className="text-gray-600">Service Tax</span>
-        //                 <span className="text-gray-800">LKR 89.99</span>
-        //               </div>
-        //               <div className="flex justify-between font-semibold pt-2 border-t border-gray-200">
-        //                 <span className="text-gray-800">Total Amount</span>
-        //                 <span className="text-emerald-600">LKR {totalAmount.toFixed(2)}</span>
-        //               </div>
-        //             </div>
-        //           </div>
-
-        //           {/* Payment Methods */}
-        //           <div className="space-y-3 mb-6">
-        //             <h3 className="font-semibold text-gray-700 mb-3">Select Payment Method</h3>
-        //             {paymentMethods.map((method) => (
-        //               <button
-        //                 key={method.id}
-        //                 onClick={() => setSelectedMethod(method.id)}
-        //                 className={`w-full p-4 border-2 rounded-xl transition-all duration-200 text-left ${
-        //                   selectedMethod === method.id
-        //                     ? 'border-emerald-500 bg-emerald-50 shadow-md'
-        //                     : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-        //                 }`}
-        //               >
-        //                 <div className="flex items-center space-x-4">
-        //                   <div className={`p-3 rounded-lg text-xl ${
-        //                     selectedMethod === method.id ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-600'
-        //                   }`}>
-        //                     {method.icon}
-        //                   </div>
-        //                   <div className="flex-1">
-        //                     <span className="font-semibold text-gray-900">{method.name}</span>
-        //                     {method.id === 'wallet' && (
-        //                       <p className="text-sm text-gray-500 mt-1">
-        //                         Available: LKR {walletBalance.toFixed(2)}
-        //                       </p>
-        //                     )}
-        //                   </div>
-        //                   {selectedMethod === method.id && (
-        //                     <div className="w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center">
-        //                       <div className="w-2 h-2 bg-white rounded-full"></div>
-        //                     </div>
-        //                   )}
-        //                 </div>
-        //               </button>
-        //             ))}
-        //           </div>
-
-        //           {/* Card Details */}
-        //           {selectedMethod === 'card' && (
-        //             <div className="space-y-4 border-t border-gray-200 pt-6">
-        //               <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-5 text-white">
-        //                 <div className="flex justify-between items-start mb-6">
-        //                   <div className="text-lg font-bold">Credit Card</div>
-        //                   <div className="text-2xl">💳</div>
-        //                 </div>
-        //                 <div className="text-xl font-mono tracking-wider mb-6">
-        //                   {cardDetails.cardNumber || '•••• •••• •••• ••••'}
-        //                 </div>
-        //                 <div className="flex justify-between items-center text-sm">
-        //                   <div>
-        //                     <p className="text-gray-400">Card Holder</p>
-        //                     <p className="font-semibold">{cardDetails.cardHolder || 'Your Name'}</p>
-        //                   </div>
-        //                   <div>
-        //                     <p className="text-gray-400">Expires</p>
-        //                     <p className="font-semibold">{cardDetails.expiryDate || 'MM/YY'}</p>
-        //                   </div>
-        //                 </div>
-        //               </div>
-
-        //               <div className="grid grid-cols-1 gap-4">
-        //                 <div>
-        //                   <label className="block text-sm font-medium text-gray-700 mb-2">
-        //                     Card Number
-        //                   </label>
-        //                   <input
-        //                     type="text"
-        //                     placeholder="1234 5678 9012 3456"
-        //                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
-        //                     value={cardDetails.cardNumber}
-        //                     onChange={(e) => handleCardInputChange('cardNumber', e.target.value)}
-        //                   />
-        //                 </div>
-
-        //                 <div className="grid grid-cols-2 gap-4">
-        //                   <div>
-        //                     <label className="block text-sm font-medium text-gray-700 mb-2">
-        //                       Expiry Date
-        //                     </label>
-        //                     <input
-        //                       type="text"
-        //                       placeholder="MM/YY"
-        //                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
-        //                       value={cardDetails.expiryDate}
-        //                       onChange={(e) => handleCardInputChange('expiryDate', e.target.value)}
-        //                     />
-        //                   </div>
-        //                   <div>
-        //                     <label className="block text-sm font-medium text-gray-700 mb-2">
-        //                       CVV
-        //                     </label>
-        //                     <input
-        //                       type="text"
-        //                       placeholder="123"
-        //                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
-        //                       value={cardDetails.cvv}
-        //                       onChange={(e) => handleCardInputChange('cvv', e.target.value)}
-        //                     />
-        //                   </div>
-        //                 </div>
-
-        //                 <div>
-        //                   <label className="block text-sm font-medium text-gray-700 mb-2">
-        //                     Card Holder Name
-        //                   </label>
-        //                   <input
-        //                     type="text"
-        //                     placeholder="John Doe"
-        //                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
-        //                     value={cardDetails.cardHolder}
-        //                     onChange={(e) => handleCardInputChange('cardHolder', e.target.value)}
-        //                   />
-        //                 </div>
-        //               </div>
-        //             </div>
-        //           )}
-
-        //           {/* Pay Button */}
-        //           <button
-        //             onClick={handlePayment}
-        //             className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white py-4 px-6 rounded-xl font-bold text-lg transition-all duration-200 mt-6 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
-        //           >
-        //             Pay LKR {totalAmount.toFixed(2)}
-        //           </button>
-
-        //           {/* Security Note */}
-        //           <div className="text-center mt-4">
-        //             <p className="text-gray-500 text-sm flex items-center justify-center gap-2">
-        //               <span className="text-emerald-500">🔒</span>
-        //               Your payment is secure and encrypted
-        //             </p>
-        //           </div>
-        //         </div>
-        //       </div>
-
-        //       {/* Payment History & Income Section */}
-        //       <div className="space-y-6">
-        //         {/* Payment History */}
-        //         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-        //           <div className="flex items-center justify-between mb-6">
-        //             <h2 className="text-xl font-bold text-gray-800">Payment History</h2>
-        //             <span className="bg-emerald-100 text-emerald-800 text-sm font-medium px-3 py-1 rounded-full">
-        //               {paymentHistory.filter(p => p.type === 'payment').length} transactions
-        //             </span>
-        //           </div>
-        //           <div className="space-y-4">
-        //             {paymentHistory.filter(p => p.type === 'payment').map((payment) => (
-        //               <div key={payment.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
-        //                 <div className="flex items-center space-x-4">
-
-        //                   <div>
-        //                     <p className="font-semibold text-gray-900">{payment.description}</p>
-        //                     <p className="text-sm text-gray-500">{new Date(payment.date).toLocaleDateString()}</p>
-        //                   </div>
-        //                 </div>
-        //                 <div className="text-right">
-        //                   <p className="font-bold text-red-600">- LKR {payment.amount.toFixed(2)}</p>
-        //                   <p className="text-sm text-green-600 font-medium">{payment.status}</p>
-        //                 </div>
-        //               </div>
-        //             ))}
-        //           </div>
-        //         </div>
-
-        //         {/* Income from Waste Sales */}
-        //         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-        //           <div className="flex items-center justify-between mb-6">
-        //             <h2 className="text-xl font-bold text-gray-800">Income from Waste Sales</h2>
-        //             <span className="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">
-        //               LKR {totalIncome.toFixed(2)}
-        //             </span>
-        //           </div>
-        //           <div className="space-y-4">
-        //             {paymentHistory.filter(p => p.type === 'income').map((income) => (
-        //               <div key={income.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
-        //                 <div className="flex items-center space-x-4">
-        //                   <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-        //                   </div>
-        //                   <div>
-        //                     <p className="font-semibold text-gray-900">{income.description}</p>
-        //                     <p className="text-sm text-gray-500">{new Date(income.date).toLocaleDateString()}</p>
-        //                   </div>
-        //                 </div>
-        //                 <div className="text-right">
-        //                   <p className="font-bold text-green-600">+ LKR {income.amount.toFixed(2)}</p>
-        //                   <p className="text-sm text-green-600 font-medium">{income.status}</p>
-        //                 </div>
-        //               </div>
-        //             ))}
-        //           </div>
-        //         </div>
-        //       </div>
-        //     </div>
-        //   </div>
-        // );
-
         return (
-          <div className="space-y-6">
-            {/* Financial Overview Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Wallet Balance */}
-              <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl shadow-lg p-6 text-white">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-emerald-100 text-sm font-medium">Wallet Balance</p>
-                    <p className="text-3xl font-bold mt-2">LKR {walletBalance.toFixed(2)}</p>
-                    <p className="text-emerald-100 text-xs mt-2">Available for payments</p>
-                  </div>
-                </div>
-              </div>
-        
-              {/* Total Income */}
-              <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg p-6 text-white">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-blue-100 text-sm font-medium">Total Income</p>
-                    <p className="text-3xl font-bold mt-2">LKR {totalIncome.toFixed(2)}</p>
-                    <p className="text-blue-100 text-xs mt-2">From waste sales</p>
-                  </div>
-                </div>
-              </div>
-        
-              {/* Total Payments */}
-              <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg p-6 text-white">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-purple-100 text-sm font-medium">Total Payments</p>
-                    <p className="text-3xl font-bold mt-2">LKR {totalPayments.toFixed(2)}</p>
-                    <p className="text-purple-100 text-xs mt-2">Service fees paid</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-        
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Payment Method Section */}
-              <div className="space-y-6">
-                <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-                  <h2 className="text-xl font-bold text-gray-800 mb-6">Make Payment</h2>
-                  
-                  {/* Order Summary */}
-                  <div className="bg-gray-50 rounded-xl p-4 mb-6">
-                    <h3 className="font-semibold text-gray-700 mb-3">Order Summary</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Waste Collection Fee</span>
-                        <span className="text-gray-800">LKR 810.00</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Service Tax</span>
-                        <span className="text-gray-800">LKR 89.99</span>
-                      </div>
-                      <div className="flex justify-between font-semibold pt-2 border-t border-gray-200">
-                        <span className="text-gray-800">Total Amount</span>
-                        <span className="text-emerald-600">LKR {totalAmount.toFixed(2)}</span>
-                      </div>
+          <div className="min-h-screen bg-gray-50 py-6 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto">
+              {/* Header */}
+
+              {/* Financial Overview Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                {/* Wallet Balance */}
+                <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl shadow-lg p-6 text-white">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-blue-100 text-sm font-medium">Wallet Balance</p>
+                      <p className="text-3xl font-bold mt-2">LKR {walletBalance.toFixed(2)}</p>
+                      <p className="text-blue-100 text-xs mt-2">Available for payments</p>
+                    </div>
+                    <div className="text-4xl text-blue-200">
+                      <FaWallet />
                     </div>
                   </div>
-        
-                  {/* Payment Methods */}
-                  <div className="space-y-3 mb-6">
-                    <h3 className="font-semibold text-gray-700 mb-3">Select Payment Method</h3>
-                    {paymentMethods.map((method) => (
-                      <button
-                        key={method.id}
-                        onClick={() => setSelectedMethod(method.id)}
-                        className={`w-full p-4 border-2 rounded-xl transition-all duration-200 text-left ${
-                          selectedMethod === method.id
-                            ? 'border-emerald-500 bg-emerald-50 shadow-md'
-                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-4">
-                          <div className={`p-3 rounded-lg text-xl ${
-                            selectedMethod === method.id ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-600'
-                          }`}>
-                            {method.icon}
-                          </div>
-                          <div className="flex-1">
-                            <span className="font-semibold text-gray-900">{method.name}</span>
-                            {method.id === 'wallet' && (
-                              <p className="text-sm text-gray-500 mt-1">
-                                Available: LKR {walletBalance.toFixed(2)}
+                </div>
+
+                {/* Total Income */}
+                <div className="bg-gradient-to-br from-green-600 to-green-700 rounded-xl shadow-lg p-6 text-white">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-green-100 text-sm font-medium">Total Income</p>
+                      <p className="text-3xl font-bold mt-2">LKR {totalIncome.toFixed(2)}</p>
+                      <p className="text-green-100 text-xs mt-2">From waste sales</p>
+                    </div>
+                    <div className="text-4xl text-green-200">
+                      <FaMoneyBillWave />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Total Payments */}
+                <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl shadow-lg p-6 text-white">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-purple-100 text-sm font-medium">Total Payments</p>
+                      <p className="text-3xl font-bold mt-2">LKR {totalPayments.toFixed(2)}</p>
+                      <p className="text-purple-100 text-xs mt-2">Service fees paid</p>
+                    </div>
+                    <div className="text-4xl text-purple-200">
+                      <FaCreditCard />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row Layout - All sections in one row */}
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                {/* Left Column - Waste Selling */}
+                <div className="space-y-6">
+                  <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+                    <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                      <FaRecycle className="text-green-600" />
+                      Sell Your Waste
+                    </h2>
+                    
+                    <div className="space-y-4">
+                      {/* Waste Type Selection */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Waste Type
+                        </label>
+                        <select
+                          value={wasteType}
+                          onChange={(e) => setWasteType(e.target.value)}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        >
+                          <option value="plastic">Plastic - LKR 50/kg</option>
+                          <option value="paper">Paper - LKR 30/kg</option>
+                          <option value="metal">Metal - LKR 80/kg</option>
+                          <option value="glass">Glass - LKR 40/kg</option>
+                          <option value="organic">Organic - LKR 20/kg</option>
+                        </select>
+                      </div>
+
+                      {/* Amount Input */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Amount (kg)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0.1"
+                          placeholder="Enter amount in kg"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          value={wasteAmount}
+                          onChange={(e) => setWasteAmount(e.target.value)}
+                        />
+                      </div>
+
+                      {/* Estimated Value */}
+                      {wasteAmount && (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="text-green-800 font-semibold text-sm">Estimated Value</p>
+                              <p className="text-green-600 text-xs">
+                                Based on current market rates
                               </p>
-                            )}
-                          </div>
-                          {selectedMethod === method.id && (
-                            <div className="w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center">
-                              <div className="w-2 h-2 bg-white rounded-full"></div>
                             </div>
-                          )}
+                            <div className="text-green-600 font-bold text-lg">
+                              LKR {calculateEstimatedValue().toFixed(2)}
+                            </div>
+                          </div>
                         </div>
+                      )}
+
+                      {/* Sell Button */}
+                      <button
+                        onClick={handleSellWaste}
+                        disabled={!wasteAmount || parseFloat(wasteAmount) <= 0 || loading}
+                        className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white py-3 px-4 rounded-lg font-semibold text-base transition-colors duration-200 mt-6 shadow-sm flex items-center justify-center gap-2"
+                      >
+                        <FaRecycle className="w-4 h-4" />
+                        {loading ? 'Processing...' : `Sell Waste - LKR ${calculateEstimatedValue().toFixed(2)}`}
                       </button>
-                    ))}
+                    </div>
                   </div>
-        
-                  {/* Card Details */}
-                  {selectedMethod === 'card' && (
-                    <div className="space-y-4 border-t border-gray-200 pt-6">
-                      <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-5 text-white">
-                        <div className="flex justify-between items-start mb-6">
-                          <div className="text-lg font-bold">Credit Card</div>
-                          <div className="text-2xl">💳</div>
+                </div>
+
+                {/* Middle Column - Payment Processing */}
+                <div className="space-y-6">
+                  <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+                    <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                      <FaCreditCard className="text-blue-600" />
+                      Make Payment
+                    </h2>
+
+                    {/* Current Balance Display */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FaWallet className="text-blue-600" />
+                          <span className="font-semibold text-blue-800">Current Balance</span>
                         </div>
-                        <div className="text-xl font-mono tracking-wider mb-6">
-                          {cardDetails.cardNumber || '•••• •••• •••• ••••'}
-                        </div>
-                        <div className="flex justify-between items-center text-sm">
-                          <div>
-                            <p className="text-gray-400">Card Holder</p>
-                            <p className="font-semibold">{cardDetails.cardHolder || 'Your Name'}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-400">Expires</p>
-                            <p className="font-semibold">{cardDetails.expiryDate || 'MM/YY'}</p>
-                          </div>
-                        </div>
-                      </div>
-        
-                      <div className="grid grid-cols-1 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Card Number
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="1234 5678 9012 3456"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
-                            value={cardDetails.cardNumber}
-                            onChange={(e) => handleCardInputChange('cardNumber', e.target.value)}
-                          />
-                        </div>
-        
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Expiry Date
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="MM/YY"
-                              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
-                              value={cardDetails.expiryDate}
-                              onChange={(e) => handleCardInputChange('expiryDate', e.target.value)}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              CVV
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="123"
-                              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
-                              value={cardDetails.cvv}
-                              onChange={(e) => handleCardInputChange('cvv', e.target.value)}
-                            />
-                          </div>
-                        </div>
-        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Card Holder Name
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="John Doe"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
-                            value={cardDetails.cardHolder}
-                            onChange={(e) => handleCardInputChange('cardHolder', e.target.value)}
-                          />
-                        </div>
+                        <span className="text-2xl font-bold text-blue-600">
+                          LKR {walletBalance.toFixed(2)}
+                        </span>
                       </div>
                     </div>
-                  )}
-        
-                  {/* Pay Button */}
-                  <button
-                    onClick={handlePayment}
-                    disabled={isProcessingPayment}
-                    className={`w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white py-4 px-6 rounded-xl font-bold text-lg transition-all duration-200 mt-6 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${
-                      isProcessingPayment ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-                  >
-                    {isProcessingPayment ? (
-                      <div className="flex items-center justify-center space-x-2">
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Processing...
+                    
+                    {/* Amount Input */}
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Payment Amount (LKR)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        placeholder="Enter amount to pay"
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        value={totalAmount}
+                        onChange={(e) => setTotalAmount(e.target.value)}
+                      />
+                    </div>
+
+                    {/* Payment Methods */}
+                    <div className="space-y-3 mb-6">
+                      <h3 className="font-semibold text-gray-700 mb-3">Select Payment Method</h3>
+                      {paymentMethods.map((method) => {
+                        const IconComponent = method.icon;
+                        return (
+                          <button
+                            key={method.id}
+                            onClick={() => setSelectedMethod(method.id)}
+                            className={`w-full p-4 border-2 rounded-xl transition-all duration-200 text-left ${
+                              selectedMethod === method.id
+                                ? 'border-blue-500 bg-blue-50 shadow-md'
+                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            <div className="flex items-center space-x-4">
+                              <div className={`p-3 rounded-lg text-xl ${
+                                selectedMethod === method.id ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'
+                              }`}>
+                                <IconComponent />
+                              </div>
+                              <div className="flex-1">
+                                <span className="font-semibold text-gray-900">{method.name}</span>
+                                {method.id === 'wallet' && (
+                                  <p className="text-sm text-gray-500 mt-1">
+                                    Available: LKR {walletBalance.toFixed(2)}
+                                  </p>
+                                )}
+                              </div>
+                              {selectedMethod === method.id && (
+                                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                                  <FaCheckCircle className="w-3 h-3 text-white" />
+                                </div>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Card Details */}
+                    {selectedMethod === 'card' && (
+                      <div className="space-y-4 border-t border-gray-200 pt-6">
+                        <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-5 text-white">
+                          <div className="flex justify-between items-start mb-6">
+                            <div className="text-lg font-bold">Credit Card</div>
+                            <div className="text-2xl">💳</div>
+                          </div>
+                          <div className="text-xl font-mono tracking-wider mb-6">
+                            {cardDetails.cardNumber || '•••• •••• •••• ••••'}
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <div>
+                              <p className="text-gray-400">Card Holder</p>
+                              <p className="font-semibold">{cardDetails.cardHolder || 'Your Name'}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-400">Expires</p>
+                              <p className="font-semibold">{cardDetails.expiryDate || 'MM/YY'}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Card Number
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="1234 5678 9012 3456"
+                              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                              value={cardDetails.cardNumber}
+                              onChange={(e) => handleCardInputChange('cardNumber', e.target.value)}
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Expiry Date
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="MM/YY"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                                value={cardDetails.expiryDate}
+                                onChange={(e) => handleCardInputChange('expiryDate', e.target.value)}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                CVV
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="123"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                                value={cardDetails.cvv}
+                                onChange={(e) => handleCardInputChange('cvv', e.target.value)}
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Card Holder Name
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="John Doe"
+                              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                              value={cardDetails.cardHolder}
+                              onChange={(e) => handleCardInputChange('cardHolder', e.target.value)}
+                            />
+                          </div>
+                        </div>
                       </div>
-                    ) : (
-                      `Pay LKR ${totalAmount.toFixed(2)}`
                     )}
-                  </button>
-        
-                  {/* Security Note */}
-                  <div className="text-center mt-4">
-                    <p className="text-gray-500 text-sm flex items-center justify-center gap-2">
-                      <span className="text-emerald-500">🔒</span>
-                      Your payment is secure and encrypted
-                    </p>
+
+                    {/* Pay Button */}
+                    <button
+                      onClick={handlePayment}
+                      disabled={!totalAmount || parseFloat(totalAmount) <= 0}
+                      className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white py-4 px-6 rounded-xl font-bold text-lg transition-all duration-200 mt-6 shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center justify-center gap-2"
+                    >
+                      <FaCreditCard className="w-5 h-5" />
+                      Pay LKR {totalAmount ? parseFloat(totalAmount).toFixed(2) : '0.00'}
+                    </button>
+
+                    {/* Security Note */}
+                    <div className="text-center mt-4">
+                      <p className="text-gray-500 text-sm flex items-center justify-center gap-2">
+                        <FaShieldAlt className="text-blue-500" />
+                        Your payment is secure and encrypted
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-        
-              {/* Payment History & Income Section */}
-              <div className="space-y-6">
-                {/* Payment History */}
-                <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-bold text-gray-800">Payment History</h2>
-                    <span className="bg-emerald-100 text-emerald-800 text-sm font-medium px-3 py-1 rounded-full">
-                      {paymentHistory.filter(p => p.type === 'payment').length} transactions
-                    </span>
-                  </div>
-                  <div className="space-y-4">
-                    {paymentHistory.filter(p => p.type === 'payment').map((payment) => (
-                      <div key={payment.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
-                        <div className="flex items-center space-x-4">
-                          <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                            <span className="text-red-600 text-lg">💸</span>
-                          </div>
-                          <div>
-                            <p className="font-semibold text-gray-900">{payment.description}</p>
-                            <p className="text-sm text-gray-500">{new Date(payment.date).toLocaleDateString()}</p>
-                            <p className="text-xs text-gray-400">Transaction ID: {payment.transactionId}</p>
-                          </div>
+
+                {/* Right Column - Transaction History */}
+                <div className="space-y-6">
+                  <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <FaHistory className="text-purple-600" />
+                        Transaction History
+                      </h2>
+                      <button
+                        onClick={fetchPaymentHistory}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-2"
+                      >
+                        Refresh
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-4 max-h-96 overflow-y-auto">
+                      {paymentHistory.length === 0 ? (
+                        <div className="text-center py-8">
+                          <FaFileAlt className="text-4xl text-gray-400 mb-2 mx-auto" />
+                          <p className="text-gray-500 text-sm">No transactions yet</p>
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold text-red-600">- LKR {payment.amount.toFixed(2)}</p>
-                          <p className={`text-sm font-medium ${
-                            payment.status === 'COMPLETED' ? 'text-green-600' : 
-                            payment.status === 'FAILED' ? 'text-red-600' : 'text-yellow-600'
-                          }`}>
-                            {payment.status}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-        
-                {/* Income from Waste Sales */}
-                <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-bold text-gray-800">Income from Waste Sales</h2>
-                    <span className="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">
-                      LKR {totalIncome.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="space-y-4">
-                    {paymentHistory.filter(p => p.type === 'income').map((income) => (
-                      <div key={income.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
-                        <div className="flex items-center space-x-4">
-                          <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                            <span className="text-green-600 text-lg">💰</span>
+                      ) : (
+                        paymentHistory.map((payment) => (
+                          <div key={payment.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+                            <div className="flex items-center space-x-3">
+                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                                payment.type === 'income' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+                              }`}>
+                                {payment.type === 'income' ? <FaMoneyBillWave className="w-5 h-5" /> : <FaCreditCard className="w-5 h-5" />}
+                              </div>
+                              <div>
+                                <p className="font-semibold text-gray-900 text-sm">{payment.description}</p>
+                                <p className="text-xs text-gray-500">{new Date(payment.createdAt).toLocaleDateString()}</p>
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                  payment.status.toLowerCase() === 'completed' ? 'text-green-600 bg-green-100' :
+                                  payment.status.toLowerCase() === 'failed' ? 'text-red-600 bg-red-100' :
+                                  'text-yellow-600 bg-yellow-100'
+                                }`}>
+                                  {payment.status.toLowerCase() === 'completed' && <FaCheckCircle className="w-3 h-3 mr-1" />}
+                                  {payment.status.toLowerCase() === 'failed' && <FaTimesCircle className="w-3 h-3 mr-1" />}
+                                  {payment.status.toLowerCase() === 'pending' && <FaClock className="w-3 h-3 mr-1" />}
+                                  {payment.status}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className={`font-bold text-sm ${
+                                payment.type === 'income' ? 'text-green-600' : 'text-red-600'
+                              }`}>
+                                {payment.type === 'income' ? '+' : '-'}LKR {Math.abs(payment.amount).toFixed(2)}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-semibold text-gray-900">{income.description}</p>
-                            <p className="text-sm text-gray-500">{new Date(income.date).toLocaleDateString()}</p>
-                            <p className="text-xs text-gray-400">Transaction ID: {income.transactionId}</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-green-600">+ LKR {income.amount.toFixed(2)}</p>
-                          <p className="text-sm text-green-600 font-medium">{income.status}</p>
-                        </div>
-                      </div>
-                    ))}
+                        ))
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1453,8 +1404,8 @@ const handlePayment = async () => {
       <header className="bg-white shadow-lg border-b">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold text-lg">♻️</span>
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+              <FaRecycle className="text-white text-lg" />
             </div>
             <h1 className="text-2xl font-bold text-gray-800">UrbanWaste360</h1>
           </div>
@@ -1464,8 +1415,9 @@ const handlePayment = async () => {
             </span>
             <button 
               onClick={handleLogout}
-              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm"
+              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm flex items-center gap-2"
             >
+              <FaSignOutAlt className="w-4 h-4" />
               Logout
             </button>
           </div>
@@ -1478,27 +1430,30 @@ const handlePayment = async () => {
           <div className="lg:w-64 bg-white rounded-2xl shadow-lg border border-gray-100 p-6 h-fit">
             <nav className="space-y-2">
               {[
-                { id: 'dashboard', label: 'Dashboard' },
-                { id: 'waste-history', label: 'Waste History' },
-                { id: 'recycling-credit', label: 'Recycling Credit' },
-                { id: 'reports', label: 'Reports' },
-                { id: 'payments', label: 'Payments' },
-                { id: 'schedule', label: 'Schedule' },
-                { id: 'profile', label: 'Profile' },
-              ].map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 ${
-                    activeTab === item.id
-                      ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg'
-                      : 'text-gray-700 hover:bg-gray-100 hover:shadow-md'
-                  }`}
-                >
-                  <span className="mr-3 text-lg">{item.icon}</span>
-                  <span className="font-medium">{item.label}</span>
-                </button>
-              ))}
+                { id: 'dashboard', label: 'Dashboard', icon: FaChartLine },
+                { id: 'waste-history', label: 'Waste History', icon: FaTrash },
+                { id: 'recycling-credit', label: 'Recycling Credit', icon: FaRecycle },
+                { id: 'reports', label: 'Reports', icon: FaFileAlt },
+                { id: 'payments', label: 'Payments', icon: FaCreditCard },
+                { id: 'schedule', label: 'Schedule', icon: FaCalendarAlt },
+                { id: 'profile', label: 'Profile', icon: FaUser },
+              ].map((item) => {
+                const IconComponent = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 flex items-center ${
+                      activeTab === item.id
+                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg'
+                        : 'text-gray-700 hover:bg-gray-100 hover:shadow-md'
+                    }`}
+                  >
+                    <IconComponent className="mr-3 text-lg" />
+                    <span className="font-medium">{item.label}</span>
+                  </button>
+                );
+              })}
             </nav>
           </div>
 

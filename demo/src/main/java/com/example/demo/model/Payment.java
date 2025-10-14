@@ -3,7 +3,12 @@ package com.example.demo.model;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+@Document(collection = "payments")
 public class Payment {
+    @Id
     private String id;
     private String userId;
     private BigDecimal amount;

@@ -8,12 +8,19 @@ import org.springframework.stereotype.Component;
 import com.example.demo.dto.CardDetails;
 import com.example.demo.dto.PaymentRequest;
 import com.example.demo.model.Payment;
+import com.example.demo.model.PaymentMethod;
 import com.example.demo.model.PaymentStatus;
 
 @Component
-public class CardPaymentProcessor {
+public class CardPaymentProcessor implements PaymentProcessor {
 
-    public Payment processPayment(PaymentRequest request, Payment payment) {
+    @Override
+    public boolean supports(PaymentMethod paymentMethod) {
+        return paymentMethod == PaymentMethod.CARD;
+    }
+
+    @Override
+    public Payment process(Payment payment, PaymentRequest request) {
         try {
             // For demo purposes, we'll simulate card payment processing
             // In real application, integrate with payment gateway like Stripe, Razorpay, etc.
