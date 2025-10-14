@@ -454,12 +454,6 @@ const Dashboard = () => {
           </div>
           );
 
-
-
-
-
-
-
       default:
         return (
           <div className="bg-white rounded-lg shadow p-6">

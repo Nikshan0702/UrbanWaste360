@@ -10,25 +10,16 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Document(collection = "payments")
+@Document(collection = "wallets")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Payment {
+public class Wallet {
     @Id
     private String id;
     private String userId;
-    private PaymentMethod paymentMethod;
-    private PaymentStatus status;
-    private BigDecimal amount;
-    private BigDecimal walletBalanceBefore;
-    private BigDecimal walletBalanceAfter;
+    private BigDecimal balance;
     private String currency;
-    private String orderId;
-    private String transactionId;
-    private String description;
-    private String cardLastFour;
-    private String cardBrand;
     private LocalDateTime createdAt;
-    private LocalDateTime processedAt;
+    private LocalDateTime updatedAt;
 }
