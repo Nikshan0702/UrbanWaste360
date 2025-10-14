@@ -1,43 +1,40 @@
 package com.example.demo.dto;
 
 import java.math.BigDecimal;
-
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
+import com.example.demo.model.PaymentMethod;
 
 public class PaymentRequest {
-    @NotNull(message = "User ID is required")
     private String userId;
-    
-    @NotNull(message = "Payment method is required")
-    private String paymentMethod;
-    
-    @NotNull(message = "Amount is required")
-    @Positive(message = "Amount must be positive")
     private BigDecimal amount;
-    
-    private String orderId;
-    private String description;
-    private CardDetails cardDetails;
+    private PaymentMethod paymentMethod;
+    private CardDetails cardDetails; // Add this field
 
+    // Constructors
     public PaymentRequest() {}
+
+    public PaymentRequest(String userId, BigDecimal amount, PaymentMethod paymentMethod) {
+        this.userId = userId;
+        this.amount = amount;
+        this.paymentMethod = paymentMethod;
+    }
+
+    public PaymentRequest(String userId, BigDecimal amount, PaymentMethod paymentMethod, CardDetails cardDetails) {
+        this.userId = userId;
+        this.amount = amount;
+        this.paymentMethod = paymentMethod;
+        this.cardDetails = cardDetails;
+    }
 
     // Getters and Setters
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
-
-    public String getPaymentMethod() { return paymentMethod; }
-    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
-
+    
     public BigDecimal getAmount() { return amount; }
     public void setAmount(BigDecimal amount) { this.amount = amount; }
-
-    public String getOrderId() { return orderId; }
-    public void setOrderId(String orderId) { this.orderId = orderId; }
-
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-
+    
+    public PaymentMethod getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(PaymentMethod paymentMethod) { this.paymentMethod = paymentMethod; }
+    
     public CardDetails getCardDetails() { return cardDetails; }
     public void setCardDetails(CardDetails cardDetails) { this.cardDetails = cardDetails; }
 }

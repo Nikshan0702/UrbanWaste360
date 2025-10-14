@@ -10,5 +10,4 @@ import com.example.demo.model.Wallet;
 @Repository
 public interface WalletRepository extends MongoRepository<Wallet, String> {
     Optional<Wallet> findByUserId(String userId);
-    boolean existsByUserId(String userId);
 }

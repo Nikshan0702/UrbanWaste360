@@ -3,47 +3,47 @@ package com.example.demo.dto;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-public class PaymentResponse {
-    private String paymentId;
-    private String status;
-    private String message;
-    private String transactionId;
-    private BigDecimal amount;
-    private BigDecimal walletBalanceAfter;
-    private LocalDateTime processedAt;
+import com.example.demo.model.PaymentMethod;
+import com.example.demo.model.PaymentStatus;
 
+public class PaymentResponse {
+    private String id;
+    private String userId;
+    private BigDecimal amount;
+    private PaymentMethod paymentMethod;
+    private PaymentStatus status;
+    private LocalDateTime createdAt;
+
+    // Constructors
     public PaymentResponse() {}
 
-    public PaymentResponse(String paymentId, String status, String message, String transactionId, 
-                          BigDecimal amount, BigDecimal walletBalanceAfter, LocalDateTime processedAt) {
-        this.paymentId = paymentId;
-        this.status = status;
-        this.message = message;
-        this.transactionId = transactionId;
+    public PaymentResponse(String id, String userId, BigDecimal amount, 
+                         PaymentMethod paymentMethod, PaymentStatus status, 
+                         LocalDateTime createdAt) {
+        this.id = id;
+        this.userId = userId;
         this.amount = amount;
-        this.walletBalanceAfter = walletBalanceAfter;
-        this.processedAt = processedAt;
+        this.paymentMethod = paymentMethod;
+        this.status = status;
+        this.createdAt = createdAt;
     }
 
     // Getters and Setters
-    public String getPaymentId() { return paymentId; }
-    public void setPaymentId(String paymentId) { this.paymentId = paymentId; }
-
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-
-    public String getMessage() { return message; }
-    public void setMessage(String message) { this.message = message; }
-
-    public String getTransactionId() { return transactionId; }
-    public void setTransactionId(String transactionId) { this.transactionId = transactionId; }
-
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+    
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
+    
     public BigDecimal getAmount() { return amount; }
     public void setAmount(BigDecimal amount) { this.amount = amount; }
-
-    public BigDecimal getWalletBalanceAfter() { return walletBalanceAfter; }
-    public void setWalletBalanceAfter(BigDecimal walletBalanceAfter) { this.walletBalanceAfter = walletBalanceAfter; }
-
-    public LocalDateTime getProcessedAt() { return processedAt; }
-    public void setProcessedAt(LocalDateTime processedAt) { this.processedAt = processedAt; }
+    
+    public PaymentMethod getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(PaymentMethod paymentMethod) { this.paymentMethod = paymentMethod; }
+    
+    public PaymentStatus getStatus() { return status; }
+    public void setStatus(PaymentStatus status) { this.status = status; }
+    
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

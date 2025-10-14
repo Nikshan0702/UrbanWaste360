@@ -1,15 +1,13 @@
 package com.example.demo.service.impl;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
+import java.util.stream.Collectors;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.demo.dto.PaymentHistoryResponse;
 import com.example.demo.dto.PaymentRequest;
 import com.example.demo.dto.PaymentResponse;
 import com.example.demo.dto.WalletResponse;
@@ -19,45 +17,53 @@ import com.example.demo.model.PaymentStatus;
 import com.example.demo.repository.PaymentRepository;
 import com.example.demo.service.PaymentService;
 import com.example.demo.service.WalletService;
-import com.example.demo.service.payment.PaymentProcessor;
 
 @Service
 public class PaymentServiceImpl implements PaymentService {
 
-    private static final Logger log = LoggerFactory.getLogger(PaymentServiceImpl.class);
-
     private final PaymentRepository paymentRepository;
     private final WalletService walletService;
-    private final List<PaymentProcessor> paymentProcessors;
 
-    public PaymentServiceImpl(PaymentRepository paymentRepository, 
-                            WalletService walletService, 
-                            List<PaymentProcessor> paymentProcessors) {
+    public PaymentServiceImpl(PaymentRepository paymentRepository, WalletService walletService) {
         this.paymentRepository = paymentRepository;
         this.walletService = walletService;
-        this.paymentProcessors = paymentProcessors;
     }
 
     @Override
     @Transactional
     public PaymentResponse processPayment(PaymentRequest request) {
         try {
-            PaymentMethod paymentMethod = PaymentMethod.valueOf(request.getPaymentMethod().toUpperCase());
-            
-            // Create payment record
-            Payment payment = createPaymentRecord(request, paymentMethod);
-            
-            // Process payment using appropriate processor
-            Payment processedPayment = getPaymentProcessor(paymentMethod)
-                    .process(payment, request);
-            
-            // Save the processed payment
-            Payment savedPayment = paymentRepository.save(processedPayment);
-            
-            return buildPaymentResponse(savedPayment);
-            
+            // Create payment
+            Payment payment = new Payment(request.getUserId(), request.getAmount(), request.getPaymentMethod());
+
+            // Handle different payment methods
+            if (request.getPaymentMethod() == PaymentMethod.WALLET) {
+                if (!walletService.hasSufficientBalance(request.getUserId(), request.getAmount())) {
+                    payment.setStatus(PaymentStatus.FAILED);
+                    paymentRepository.save(payment);
+                    throw new RuntimeException("Insufficient wallet balance");
+                }
+                
+                walletService.updateWalletBalance(request.getUserId(), request.getAmount().negate());
+                payment.setStatus(PaymentStatus.COMPLETED);
+                
+            } else {
+                // For CARD and CASH - always successful in demo
+                payment.setStatus(PaymentStatus.COMPLETED);
+            }
+
+            Payment savedPayment = paymentRepository.save(payment);
+
+            return new PaymentResponse(
+                savedPayment.getId(),
+                savedPayment.getUserId(),
+                savedPayment.getAmount(),
+                savedPayment.getPaymentMethod(),
+                savedPayment.getStatus(),
+                savedPayment.getCreatedAt()
+            );
+
         } catch (Exception e) {
-            log.error("Payment processing failed for user {}: {}", request.getUserId(), e.getMessage());
             throw new RuntimeException("Payment processing failed: " + e.getMessage());
         }
     }
@@ -70,55 +76,41 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public WalletResponse addToWallet(String userId, BigDecimal amount) {
-        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new RuntimeException("Amount must be positive");
-        }
-        return walletService.updateWalletBalance(userId, amount);
+        // This adds money to wallet (for waste selling income)
+        WalletResponse walletResponse = walletService.updateWalletBalance(userId, amount);
+        
+        // Create a payment record for the wallet top-up
+        Payment payment = new Payment(userId, amount, PaymentMethod.WALLET);
+        payment.setStatus(PaymentStatus.COMPLETED);
+        paymentRepository.save(payment);
+        
+        return walletResponse;
     }
 
-    private Payment createPaymentRecord(PaymentRequest request, PaymentMethod paymentMethod) {
-        Payment payment = new Payment();
-        payment.setUserId(request.getUserId());
-        payment.setPaymentMethod(paymentMethod);
-        payment.setAmount(request.getAmount());
-        payment.setOrderId(request.getOrderId());
-        payment.setDescription(request.getDescription());
-        payment.setTransactionId(generateTransactionId());
-        payment.setStatus(PaymentStatus.PENDING);
-        payment.setCurrency("USD");
-        payment.setCreatedAt(LocalDateTime.now());
-        return paymentRepository.save(payment);
-    }
-
-    private PaymentProcessor getPaymentProcessor(PaymentMethod paymentMethod) {
-        return paymentProcessors.stream()
-                .filter(processor -> processor.supports(paymentMethod))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Unsupported payment method: " + paymentMethod));
-    }
-
-    private PaymentResponse buildPaymentResponse(Payment payment) {
-        return new PaymentResponse(
-            payment.getId(),
-            payment.getStatus().name(),
-            getStatusMessage(payment.getStatus()),
-            payment.getTransactionId(),
-            payment.getAmount(),
-            payment.getWalletBalanceAfter(),
-            payment.getProcessedAt()
-        );
-    }
-
-    private String getStatusMessage(PaymentStatus status) {
-        switch (status) {
-            case COMPLETED: return "Payment completed successfully";
-            case FAILED: return "Payment failed";
-            case PROCESSING: return "Payment is being processed";
-            default: return "Payment is pending";
-        }
-    }
-
-    private String generateTransactionId() {
-        return "TXN_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase();
+    @Override
+    public List<PaymentHistoryResponse> getPaymentHistory(String userId) {
+        List<Payment> payments = paymentRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        
+        return payments.stream().map(payment -> {
+            String type = "payment";
+            String description = payment.getPaymentMethod() + " Payment";
+            
+            // If it's a wallet top-up (positive amount), change the type and description
+            if (payment.getAmount().compareTo(BigDecimal.ZERO) > 0 && 
+                payment.getPaymentMethod() == PaymentMethod.WALLET) {
+                type = "income";
+                description = "Wallet Top-up";
+            }
+            
+            return new PaymentHistoryResponse(
+                payment.getId(),
+                type,
+                description,
+                payment.getAmount(),
+                payment.getStatus().toString(),
+                payment.getCreatedAt(),
+                payment.getId()
+            );
+        }).collect(Collectors.toList());
     }
 }
