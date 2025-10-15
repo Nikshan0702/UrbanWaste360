@@ -37,22 +37,6 @@ export default function CollectionFormPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 to-green-50">
-      {/* HEADER */}
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
-          <h1 className="text-xl font-bold text-emerald-600">♻️ Smart Waste</h1>
-
-          <nav className="hidden md:flex gap-6 text-sm font-medium text-slate-600">
-            <span className="hover:text-slate-900 cursor-pointer">Home</span>
-            <span className="text-emerald-600 cursor-pointer">Routes</span>
-            <span className="hover:text-slate-900 cursor-pointer">Report</span>
-            <span className="hover:text-slate-900 cursor-pointer">Scan</span>
-            <span className="hover:text-slate-900 cursor-pointer">Contact</span>
-          </nav>
-
-          <div className="h-8 w-8 rounded-full bg-slate-200" />
-        </div>
-      </header>
 
       {/* MAIN */}
       <main className="mx-auto max-w-6xl px-4 py-10">

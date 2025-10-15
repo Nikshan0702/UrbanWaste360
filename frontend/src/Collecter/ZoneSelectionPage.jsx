@@ -18,22 +18,7 @@ export default function RouteSelectionPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 to-green-50 p-6">
       {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-emerald-600">♻️ Smart Waste</h1>
-          </div>
-          <nav className="hidden gap-6 text-sm font-medium text-slate-600 md:flex">
-            <span className="hover:text-slate-900">Home</span>
-            <span className="text-emerald-600">Routes</span>
-            <span className="hover:text-slate-900">Report</span>
-            <span className="hover:text-slate-900">Scan</span>
-            <span className="hover:text-slate-900">Contact</span>
-          </nav>
-          <div className="h-8 w-8 rounded-full bg-slate-200" />
-        </div>
-      </header>
-
+     
       {/* Main Content */}
       <main className="mx-auto w-full max-w-7xl px-4 py-10">
         <section className="rounded-2xl border border-slate-200 bg-white/80 p-6 shadow-sm">

@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import ZoneSelection from './ZoneSelectionPage';
+import NearbyBinsComponent from './NearbyBinsComponent';
 import { 
   FaWallet, 
   FaMoneyBillWave, 
@@ -20,6 +23,7 @@ import {
 } from 'react-icons/fa';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [userData, setUserData] = useState(null);
   const [error, setError] = useState('');
@@ -42,8 +46,14 @@ const Dashboard = () => {
     try {
       const storedUserData = localStorage.getItem('userData');
       if (storedUserData) {
-        setUserData(JSON.parse(storedUserData));
-        setUserId(JSON.parse(storedUserData).id);
+        try {
+          const parsedData = JSON.parse(storedUserData);
+          if (!parsedData.id) throw new Error('Invalid user data');
+          setUserData(parsedData);
+          setUserId(parsedData.id);
+        } catch (error) {
+          setError('Failed to load user data from localStorage');
+        }
       } else {
         const response = await fetch('http://localhost:8080/api/users/profile');
         if (response.ok) {
@@ -68,7 +78,7 @@ const Dashboard = () => {
         setBinsData(bins);
       }
     } catch (error) {
-      console.error('Error fetching bins data:', error);
+      setError('Error fetching bins data');
     }
   };
 
@@ -80,7 +90,7 @@ const Dashboard = () => {
         setCollectionData(collections);
       }
     } catch (error) {
-      console.error('Error fetching collection data:', error);
+      setError('Error fetching collection data');
     }
   };
 
@@ -92,14 +102,14 @@ const Dashboard = () => {
         setRoutesData(routes);
       }
     } catch (error) {
-      console.error('Error fetching routes data:', error);
+      setError('Error fetching routes data');
     }
   };
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('userData');
-    window.location.href = '/';
+    navigate('/'); // Use React Router's navigate to avoid full page reload
   };
 
   const renderContent = () => {
@@ -136,24 +146,7 @@ const Dashboard = () => {
         
       case 'bins':
         return (
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold mb-4">Waste Bins</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {binsData.length === 0 ? (
-                  <div className="text-center py-8"><p className="text-gray-500">No bins data available.</p></div>
-                ) : (
-                  binsData.map((bin) => (
-                    <div key={bin.id} className="bg-gray-50 border border-gray-200 p-4 rounded-lg">
-                      <h3 className="text-lg font-semibold">{bin.name}</h3>
-                      <p className="text-gray-600">{bin.location}</p>
-                      <p className="text-sm text-gray-500">Capacity: {bin.capacity}kg</p>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
+          <NearbyBinsComponent binsData={binsData} />
         );
 
       case 'collection':
@@ -176,30 +169,70 @@ const Dashboard = () => {
                 )}
               </div>
             </div>
-          </div>
+          </div> 
         );
         
       case 'routes':
         return (
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold mb-4">Routes</h2>
-              <div className="space-y-4">
-                {routesData.length === 0 ? (
-                  <div className="text-center py-8"><p className="text-gray-500">No routes data available.</p></div>
-                ) : (
-                  routesData.map((route) => (
-                    <div key={route.id} className="bg-gray-50 border border-gray-200 p-4 rounded-lg">
-                      <h3 className="text-lg font-semibold">{route.name}</h3>
-                      <p className="text-gray-600">Route Description: {route.description}</p>
-                      <p className="text-sm text-gray-500">Stops: {route.stops.join(', ')}</p>
-                    </div>
-                  ))
-                )}
+          <ZoneSelection userId={userId} />
+        );
+
+      case 'profile':
+        return (
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4">Profile Details</h2>
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                  <div className="p-3 bg-gray-50 rounded border">
+                    <p className="text-lg font-semibold">{displayData.name}</p>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                  <div className="p-3 bg-gray-50 rounded border">
+                    <p className="text-lg font-semibold">{displayData.email}</p>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                  <div className="p-3 bg-gray-50 rounded border">
+                    <p className="text-lg font-semibold">{displayData.number || displayData.phone || 'Not provided'}</p>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                  <div className="p-3 bg-gray-50 rounded border">
+                    <p className="text-lg font-semibold">{displayData.role || 'USER'}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                <div className="p-3 bg-gray-50 rounded border min-h-[60px]">
+                  <p className="text-lg font-semibold">{displayData.address || 'Not provided'}</p>
+                </div>
+              </div>
+
+              {error && (
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded">
+                  <p className="text-yellow-700">
+                    <strong>Note:</strong> {error}
+                  </p>
+                </div>
+              )}
+
+              <div className="pt-4 border-t">
+                <button className="bg-emerald-600 text-white px-6 py-3 rounded-lg hover:bg-emerald-700 font-semibold">
+                  Edit Profile
+                </button>
               </div>
             </div>
           </div>
         );
+        
 
       default:
         return (
@@ -244,12 +277,14 @@ const Dashboard = () => {
                 { id: 'bins', label: 'Waste Bins', icon: FaRecycle },
                 { id: 'collection', label: 'Record Collection', icon: FaHistory },
                 { id: 'routes', label: 'Routes', icon: FaCalendarAlt },
+                { id: 'profile', label: 'Profile', icon: FaUser } // Added Profile tab
               ].map((item) => {
                 const IconComponent = item.icon;
                 return (
                   <button
                     key={item.id}
                     onClick={() => setActiveTab(item.id)}
+                    aria-label={`Go to ${item.label}`}
                     className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 flex items-center ${
                       activeTab === item.id
                         ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg'

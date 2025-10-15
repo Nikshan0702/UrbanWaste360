@@ -48,7 +48,7 @@ export default function ConfirmationPage() {
         </div>
 
         <button
-          onClick={() => navigate("/ZoneSelection")}
+          onClick={() => navigate("/CollecterDashBoard")}
           className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl transition duration-300 ease-in-out shadow-md"
         >
           Go Home

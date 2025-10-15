@@ -10,6 +10,8 @@ import CollectionFormPage from './Collecter/CollectionFormPage';
 import ConfirmationPage from './Collecter/ConfirmationPage';
 import CollecterDashBoard from './Collecter/Collectiondashboard';
 import NearbyBins from './Collecter/NearbyBinsComponent';
+import CollectionRecords from './Collecter/CollectionRecords';
+
 function App() {
   return (
     <BrowserRouter>
@@ -25,7 +27,8 @@ function App() {
           <Route path="/collection-form" element={<CollectionFormPage />} />
           <Route path="/confirmation" element={<ConfirmationPage />} />
           <Route path="/CollecterDashBoard" element={<CollecterDashBoard />} />
-          <Route path="/NearbyBins" element={<NearbyBins />} />
+          <Route path="/NearbyBins" element={<NearbyBins />} />    
+          <Route path="/CollectionRecords" element={<CollectionRecords />} />         
 
           <Route path="*" element={<div className="p-10">404 Not Found</div>} />
           </Routes>

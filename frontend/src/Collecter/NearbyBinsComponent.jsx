@@ -2,16 +2,19 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 
 const zones = [
-  "Colombo 01","Colombo 02","Colombo 03","Colombo 04","Colombo 05",
-  "Colombo 06","Colombo 07","Colombo 08","Colombo 09","Colombo 10",
-  "Colombo 11","Colombo 12","Colombo 13","Colombo 14"
+  "Colombo 07 - Cinnamon Gardens",
+  "Kotte - Nugegoda",
+  "Dehiwala - Mount Lavinia",
 ];
+
+const statuses = ["Pending", "Collected", "Missed"];
 
 const NearbyBins = () => {
   const [bins, setBins] = useState([]);
   const [filteredBins, setFilteredBins] = useState([]);
   const [selectedZone, setSelectedZone] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -36,10 +39,13 @@ const NearbyBins = () => {
 
   const handleZoneClick = (zone) => {
     setSelectedZone(zone);
-    const filtered = bins.filter(bin =>
-      bin.location.replace(/\s+/g,'').toLowerCase()
-        .includes(zone.replace(/\s+/g,'').toLowerCase()) &&
-      bin.binId.toLowerCase().includes(searchTerm.toLowerCase())
+    const filtered = bins.filter((bin) =>
+      bin.location
+        .replace(/\s+/g, "")
+        .toLowerCase()
+        .includes(zone.replace(/\s+/g, "").toLowerCase()) &&
+      bin.binId.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      (selectedStatus === "" || bin.status.toLowerCase() === selectedStatus.toLowerCase())
     );
     setFilteredBins(filtered);
   };
@@ -48,27 +54,39 @@ const NearbyBins = () => {
     const value = e.target.value;
     setSearchTerm(value);
 
-    const filtered = bins.filter(bin =>
+    const filtered = bins.filter((bin) =>
       bin.binId.toLowerCase().includes(value.toLowerCase()) &&
-      (selectedZone === "" || bin.location.replace(/\s+/g,'').toLowerCase()
-        .includes(selectedZone.replace(/\s+/g,'').toLowerCase()))
+      (selectedZone === "" || bin.location.replace(/\s+/g, "").toLowerCase().includes(selectedZone.replace(/\s+/g, "").toLowerCase())) &&
+      (selectedStatus === "" || bin.status.toLowerCase() === selectedStatus.toLowerCase())
     );
     setFilteredBins(filtered);
   };
 
   const handleAllClick = () => {
     setSelectedZone("");
-    setFilteredBins(bins.filter(bin =>
-      bin.binId.toLowerCase().includes(searchTerm.toLowerCase())
-    ));
+    setSelectedStatus("");
+    setFilteredBins(bins.filter((bin) => bin.binId.toLowerCase().includes(searchTerm.toLowerCase())));
+  };
+
+  const handleStatusClick = (binId, status) => {
+    // Update the status of a particular bin
+    const updatedBins = bins.map((bin) =>
+      bin.binId === binId ? { ...bin, status: status } : bin
+    );
+    setBins(updatedBins);
+    setFilteredBins(updatedBins);
   };
 
   const getStatusColor = (status) => {
-    switch(status?.toLowerCase()){
-      case "pending": return "bg-yellow-100 text-yellow-800";
-      case "collected": return "bg-green-100 text-green-800";
-      case "missed": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+    switch (status?.toLowerCase()) {
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "collected":
+        return "bg-green-100 text-green-800";
+      case "missed":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -87,12 +105,14 @@ const NearbyBins = () => {
 
       {/* Zone buttons */}
       <div className="flex flex-wrap gap-2 mb-6 overflow-x-auto">
-        {zones.map(zone => (
+        {zones.map((zone) => (
           <button
             key={zone}
             onClick={() => handleZoneClick(zone)}
             className={`px-4 py-2 rounded-md border ${
-              selectedZone === zone ? "bg-green-500 text-white" : "bg-white text-gray-800 border-gray-300"
+              selectedZone === zone
+                ? "bg-green-500 text-white"
+                : "bg-white text-gray-800 border-gray-300"
             } hover:bg-green-400 hover:text-white transition`}
           >
             {zone}
@@ -114,13 +134,36 @@ const NearbyBins = () => {
 
       {/* Bin cards */}
       <div className="space-y-4">
-        {filteredBins.map(bin => (
+        {filteredBins.map((bin) => (
           <div key={bin.id} className="flex justify-between items-center p-4 bg-white rounded-lg shadow hover:shadow-md transition">
             <div>
               <p className="font-semibold text-gray-800">{bin.binId}</p>
               <p className="text-gray-600 text-sm">{bin.location}</p>
             </div>
-            <span className={`px-3 py-1 rounded-full font-semibold text-sm ${getStatusColor(bin.status || "Pending")}`}>
+
+            {/* Status Buttons for each bin */}
+            <div className="flex space-x-2">
+              {statuses.map((status) => (
+                <button
+                  key={status}
+                  onClick={() => handleStatusClick(bin.binId, status)}
+                  className={`px-4 py-2 rounded-md border ${
+                    bin.status === status
+                      ? "bg-blue-500 text-white"
+                      : "bg-white text-gray-800 border-gray-300"
+                  } hover:bg-blue-400 hover:text-white transition`}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
+
+            {/* Display bin status */}
+            <span
+              className={`px-3 py-1 rounded-full font-semibold text-sm ${getStatusColor(
+                bin.status || "Pending"
+              )}`}
+            >
               {bin.status || "Pending"}
             </span>
           </div>

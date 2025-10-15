@@ -68,8 +68,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/waste/**").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/users/profile").authenticated()
+                .requestMatchers("/api/**").hasRole("collector")
                 .requestMatchers("/api/bins/**").hasRole("collector")
-                
+                .requestMatchers("/api/collection-records/**").hasRole("collector")
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())
