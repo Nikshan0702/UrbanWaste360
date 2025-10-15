@@ -1,6 +1,6 @@
-package com.example.SpringbootProject.Repo;
+package com.example.demo.repository;
 
-import com.example.SpringbootProject.Entity.WasteRecord;
+import com.example.demo.model.WasteRecord;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.List;

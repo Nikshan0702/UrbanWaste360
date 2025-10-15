@@ -1,7 +1,7 @@
-package com.example.SpringbootProject.Controller;
+package com.example.demo.controller;
 
-import com.example.SpringbootProject.Entity.WasteRecord;
-import com.example.SpringbootProject.Service.WasteRecordService;
+import com.example.demo.model.WasteRecord;
+import com.example.demo.service.WasteRecordService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -9,8 +9,8 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@CrossOrigin(origins = "*")
-@RequestMapping("api/v1/waste")
+@CrossOrigin(origins = {"http://localhost:5173","http://localhost:3000"}, allowCredentials = "true")
+@RequestMapping("/api/waste-records")
 public class WasteRecordController {
 
     private final WasteRecordService service;

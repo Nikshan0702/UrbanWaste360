@@ -1,7 +1,7 @@
-package com.example.SpringbootProject.Service;
+package com.example.demo.service;
 
-import com.example.SpringbootProject.Entity.WasteRecord;
-import com.example.SpringbootProject.Repo.WasteRecordRepo;
+import com.example.demo.model.WasteRecord;
+import com.example.demo.repository.WasteRecordRepo;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
