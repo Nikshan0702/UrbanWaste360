@@ -1404,10 +1404,10 @@ const fetchPaymentHistory = async () => {
       <header className="bg-white shadow-lg border-b">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
-              <FaRecycle className="text-white text-lg" />
+            <div className="w-10 h-10 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center">
+              <span className="text-white text-xl">♻️</span>
             </div>
-            <h1 className="text-2xl font-bold text-gray-800">UrbanWaste360</h1>
+            <h1 className="text-2xl font-bold text-gray-900">UrbanWaste360</h1>
           </div>
           <div className="flex items-center space-x-4">
             <span className="text-gray-600 font-medium">
@@ -1445,7 +1445,7 @@ const fetchPaymentHistory = async () => {
                     onClick={() => setActiveTab(item.id)}
                     className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 flex items-center ${
                       activeTab === item.id
-                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg'
+                        ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg'
                         : 'text-gray-700 hover:bg-gray-100 hover:shadow-md'
                     }`}
                   >
