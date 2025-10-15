@@ -4,7 +4,7 @@ import Authentication from './user/Authentication';
 import Dashboard from './user/Dashboard';
 import PaymentDetailsPage from './payment/PaymentDetailsPage';
 import HomePage from './payment/HomePage';
-
+import CollectorDashboard from './Collecter/CollecterDashboard';
 
 function App() {
   return (
@@ -14,6 +14,7 @@ function App() {
           <Route path="/Authentication" element={<Authentication />} />
           <Route path="/Dashboard" element={<Dashboard />} />
           <Route path="/" element={<HomePage />} />
+          <Route path="/collector-dashboard" element={<CollectorDashboard />} />
           </Routes>
       
     </BrowserRouter>
