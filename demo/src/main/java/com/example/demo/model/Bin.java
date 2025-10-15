@@ -28,3 +28,5 @@ public class Bin {
     public String getAssignedCollectorId() { return assignedCollectorId; }
     public void setAssignedCollectorId(String assignedCollectorId) { this.assignedCollectorId = assignedCollectorId; }
 }
+
+
