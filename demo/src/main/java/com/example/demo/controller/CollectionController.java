@@ -13,7 +13,6 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "*")
 public class CollectionController {
 
     @Autowired
@@ -83,6 +82,4 @@ public class CollectionController {
     List<Bin> bins = binRepository.findAll();
     return ResponseEntity.ok(bins);
 }
-
-
 }

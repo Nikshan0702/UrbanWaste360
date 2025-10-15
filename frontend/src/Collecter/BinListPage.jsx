@@ -8,10 +8,10 @@ export default function BinListPage() {
   const navigate = useNavigate();
 
   const [bins, setBins] = useState([]);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(""); 
 
   useEffect(() => {
-    axios.get("http://localhost:8089/api/bins").then((res) => setBins(res.data));
+    axios.get("http://localhost:8080/api/bins").then((res) => setBins(res.data));
   }, []);
 
   const filteredBins = bins.filter(
@@ -126,7 +126,7 @@ export default function BinListPage() {
                     <td className="p-3">{bin.location}</td>
                     <td className="p-3 text-center">
                       <button
-                        onClick={() => navigate("/collect", { state: { bin } })}
+                        onClick={() => navigate("/collection-form", { state: { bin } })}
                         className="rounded-lg bg-emerald-500 px-4 py-2 text-white text-sm font-medium shadow hover:bg-emerald-600 transition"
                       >
                         Collect

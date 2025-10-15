@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { CheckCircle2 } from "lucide-react"; // optional icon library (install via: npm install lucide-react)
+import { CheckCircle2 } from "lucide-react";
 
 export default function ConfirmationPage() {
   const { state } = useLocation();
@@ -48,7 +48,7 @@ export default function ConfirmationPage() {
         </div>
 
         <button
-          onClick={() => navigate("/selectzone")}
+          onClick={() => navigate("/ZoneSelection")}
           className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl transition duration-300 ease-in-out shadow-md"
         >
           Go Home

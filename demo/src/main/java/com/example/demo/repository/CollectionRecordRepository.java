@@ -9,3 +9,4 @@ public interface CollectionRecordRepository extends MongoRepository<CollectionRe
     List<CollectionRecord> findByCollectorId(String collectorId);
     List<CollectionRecord> findByBinId(String binId);
 }
+

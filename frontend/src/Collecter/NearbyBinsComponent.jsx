@@ -18,7 +18,7 @@ const NearbyBins = () => {
   const fetchAllBins = async () => {
     try {
       setLoading(true);
-      const res = await axios.get("http://localhost:8089/api/bins");
+      const res = await axios.get("http://localhost:8080/api/bins");
       setBins(res.data);
       setFilteredBins(res.data);
       setError("");

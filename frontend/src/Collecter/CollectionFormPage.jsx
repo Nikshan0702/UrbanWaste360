@@ -31,7 +31,7 @@ export default function CollectionFormPage() {
       timestamp: new Date(time),
     };
 
-    await axios.post("http://localhost:8089/api/collection/record", record);
+    await axios.post("http://localhost:8080/api/collection/record", record);
     navigate("/confirmation", { state: { record } });
   };
 

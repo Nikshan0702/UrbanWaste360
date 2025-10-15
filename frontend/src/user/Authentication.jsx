@@ -76,7 +76,7 @@ const Authentication = () => {
     // Role-based navigation
     switch (role) {
       case 'collector':
-        navigate('/collector-dashboard');
+        navigate('/CollecterDashBoard');
         break;
       case 'admin':
         navigate('/admin');
