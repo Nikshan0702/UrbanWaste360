@@ -317,9 +317,10 @@ import {
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, BarElement, Tooltip, Legend);
 
 const TYPES = ["Organic","Plastic","Paper","Glass","Metal","Other"];
+const BASE = import.meta.env.VITE_API_BASE || "http://localhost:8080/api/waste-records";
+
 
 export default function WasteDashboard({
-  residentId = "user123",
   // what to show on this page:
   showHeaderCards = true,
   showCredits = true,
@@ -333,6 +334,7 @@ export default function WasteDashboard({
   showMiniSummary = false, 
 }) {
   const [records, setRecords] = useState([]);
+  const [allRecords, setAllRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({ from:"", to:"", type:"" });
   const [form, setForm] = useState({ date:"", type:"Plastic", quantity:"", unit:"kg", notes:"" });
@@ -340,7 +342,26 @@ export default function WasteDashboard({
   const [credits, setCredits] = useState(0);
   const [deviceLinked, setDeviceLinked] = useState(true); // toggle to show E2
 
+  // --- auth + user ---
+  const token = localStorage.getItem("authToken") || "";
+  const storedUser = (() => {
+    try { return JSON.parse(localStorage.getItem("userData") || "{}"); } catch { return {}; }
+  })();
+  const userId = storedUser?.id || storedUser?._id || storedUser?.userId || ""; // your unique user id
 
+  // --- helper: client-side filter for current user + UI filters ---
+  const applyLocalFilters = (rows) => {
+    let list = rows;
+
+    // Keep only current user’s rows if backend isn’t filtering
+    if (userId) list = list.filter(r => r.residentId === userId);
+
+    if (filters.type) list = list.filter(r => r.type === filters.type);
+    if (filters.from) list = list.filter(r => (r.date || "").slice(0,10) >= filters.from);
+    if (filters.to)   list = list.filter(r => (r.date || "").slice(0,10) <= filters.to);
+
+    return list;
+  };
 
 
   const kpis = useMemo(() => {
@@ -390,7 +411,6 @@ export default function WasteDashboard({
     lastSynced: latestDate ? latestDate.toLocaleString() : "—",
   };
 }, [records]);
-
 
 
 
@@ -449,20 +469,65 @@ const barOptions = React.useMemo(() => ({
 
 
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const data = await WasteAPI.list({ residentId, ...filters });
-      setRecords(data);
-      const c = await WasteAPI.credits(residentId);
-      setCredits(c.points ?? c);
-    } catch (e) {
-      console.error(e);
-    } finally { setLoading(false); }
+ const load = async () => {
+  setLoading(true);
+  try {
+    const token = localStorage.getItem("authToken");
+    // console.log("[WasteDashboard] using BASE:", BASE);
+    // console.log("[WasteDashboard] token present:", !!token);
+
+    // if (!token) throw new Error("Not authenticated (missing token)");
+
+    const res = await fetch(`${BASE}/records`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        // 'Content-Type' on GET is optional; you can remove it if you like
+        // "Content-Type": "application/json",
+      },
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(errText || `${res.status} ${res.statusText}`);
+    }
+
+    const data = await res.json();
+    setAllRecords(Array.isArray(data) ? data : []);
+    setRecords(applyLocalFilters(Array.isArray(data) ? data : []));
+
+    const c = await WasteAPI.credits(userId);
+    setCredits(c.points ?? c ?? 0);
+
+    // if (cr.ok) {
+    //   const c = await cr.json();
+    //   setCredits(c.points ?? c ?? 0);
+    // } else {
+    //   setCredits(calcLocalCredits(applyLocalFilters(data)));
+    // }
+  } catch (e) {
+    console.error("Waste load error:", e.message || e);
+    setAllRecords([]); setRecords([]); setCredits(0);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+
+  // local credit calc fallback
+  const FACTOR = { Plastic:10, Paper:6, Metal:12, Glass:8, Organic:0, Other:0 };
+  const calcLocalCredits = (rows) =>
+    rows.reduce((sum, r) => sum + Math.round((Number(r.quantity)||0) * (FACTOR[r.type] || 0)), 0);
+
+  // re-apply UI filters without refetch
+  const applyFilters = () => {
+    setRecords(applyLocalFilters(allRecords));
   };
 
-  useEffect(() => { load(); }, []); // initial
-  const applyFilters = async () => load();
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { setRecords(applyLocalFilters(allRecords)); /* eslint-disable-next-line */ }, [filters, userId, allRecords]);
+
+
 
   const totalsByType = useMemo(() => {
     const map = Object.fromEntries(TYPES.map(t => [t, 0]));
@@ -526,12 +591,47 @@ const barOptions = React.useMemo(() => ({
 
   const submit = async (e) => {
     e.preventDefault();
-    const payload = { ...form, quantity: Number(form.quantity), residentId, source:"manual" };
-    if (editing) await WasteAPI.update(editing, payload); else await WasteAPI.create(payload);
-    resetForm(); await load();
+    if (!token) return alert("Not authenticated");
+    if (!userId) return alert("Missing user id");
+
+    const payload = {
+      ...form,
+      quantity: Number(form.quantity),
+      unit: form.unit || "kg",
+      source: "manual",
+      residentId: userId,         // ensure record ties to current user
+    };
+
+    const url = editing ? `${BASE}/records/${editing}` : `${BASE}/records`;
+    const method = editing ? "PUT" : "POST";
+
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type":"application/json", Authorization:`Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const t = await res.text();
+      return alert(t || `${res.status} ${res.statusText}`);
+    }
+    resetForm();
+    await load();
   };
 
-  const del = async (id) => { if (confirm("Delete record?")) { await WasteAPI.remove(id); await load(); } };
+  const del = async (id) => {
+    if (!token) return alert("Not authenticated");
+    if (!confirm("Delete record?")) return;
+    const res = await fetch(`${BASE}/records/${id}`, {
+      method: "DELETE",
+      headers: { Authorization:`Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const t = await res.text();
+      return alert(t || `${res.status} ${res.statusText}`);
+    }
+    await load();
+  };
 
   const toCSV = () => {
     const head = ["date","type","quantity","unit","notes"];

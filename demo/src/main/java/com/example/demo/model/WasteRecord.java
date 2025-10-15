@@ -7,7 +7,6 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class WasteRecord {
     @Id
     private String id;
-
     private String residentId;
     private String date;     // ISO date: "2025-10-12"
     private String type;     // Organic | Plastic | Paper | Glass | Metal | Other
@@ -38,6 +37,16 @@ public class WasteRecord {
     {
         this.residentId = residentId;
     }
+
+    // public String getUserId()
+    // {
+    //     return userId;
+    // }
+
+    // public void setUserId(String userId)
+    // {
+    //     this.userId = userId;
+    // }
 
     public String getDate()
     {

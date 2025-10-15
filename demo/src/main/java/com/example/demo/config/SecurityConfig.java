@@ -64,8 +64,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/public/**").permitAll()
-                .requestMatchers("/api/payments/**").permitAll()
-                .requestMatchers("/api/waste/**").permitAll()
+                .requestMatchers("/api/payments/**").authenticated()
+                .requestMatchers("/api/waste-records/**").authenticated()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/users/profile").authenticated()
                 .anyRequest().authenticated()

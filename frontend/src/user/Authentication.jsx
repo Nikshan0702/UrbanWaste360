@@ -519,6 +519,8 @@ const Authentication = () => {
     }
 
     const data = await response.json();
+    const token = data.token || data.jwtToken;
+    if (!token) throw new Error('No token returned from server');
     console.log('Login successful:', data);
 
     // Store authentication data
