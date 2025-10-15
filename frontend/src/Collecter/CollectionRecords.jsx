@@ -40,7 +40,6 @@ const CollectionRecords = () => {
             <table className="min-w-full bg-white border border-gray-300 shadow-md mt-6 rounded-lg">
                 <thead className="bg-gray-100">
                     <tr>
-                        <th className="px-4 py-2 text-left text-gray-700 font-semibold">ID</th>
                         <th className="px-4 py-2 text-left text-gray-700 font-semibold">Bin ID</th>
                         <th className="px-4 py-2 text-left text-gray-700 font-semibold">Collector ID</th>
                         <th className="px-4 py-2 text-left text-gray-700 font-semibold">Status</th>
@@ -52,7 +51,6 @@ const CollectionRecords = () => {
                 <tbody>
                     {records.map((record) => (
                         <tr key={record.id} className="border-t hover:bg-gray-50">
-                            <td className="px-4 py-2 text-gray-700">{record.id}</td>
                             <td className="px-4 py-2 text-gray-700">{record.binId}</td>
                             <td className="px-4 py-2 text-gray-700">{record.collectorId}</td>
                             <td className="px-4 py-2 text-gray-700">{record.status}</td>
