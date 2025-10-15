@@ -548,6 +548,8 @@ import {
   FaCalendarAlt,
   FaFileAlt
 } from 'react-icons/fa';
+import DashboardPage from '../track-monitor/pages/DashboardPage';
+import WasteHistoryPage from '../track-monitor/pages/WasteHistoryPage';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -958,9 +960,37 @@ const fetchPaymentHistory = async () => {
                 </div>
               </div>
             </div>
+
+            <div className="bg-white rounded-lg shadow p-6">
+                <DashboardPage/>
+            </div>
           </div>
         );
 
+      
+      case 'waste-history':
+        return (
+            <div className="space-y-6">
+              <WasteHistoryPage/>
+            </div>
+        );
+        
+      
+      
+      case 'recycling-credit':
+        return (
+            <div className="space-y-6">
+              
+            </div>
+        );
+      
+      
+      
+      
+      
+      
+      
+      
       case 'profile':
         return (
           <div className="bg-white rounded-lg shadow p-6">
