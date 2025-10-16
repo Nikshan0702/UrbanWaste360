@@ -49,16 +49,39 @@ const Wallet = () => {
 
   const fetchWalletBalance = async () => {
     try {
-      // This endpoint is path-param based; keep as-is
-      const res = await fetch(`${API}/api/payments/wallet/${userId}`, { credentials: 'include' });
+      // either shape works; this calls /api/payments/wallet?residentId=...
+      const res = await authFetch(`/api/payments/wallet`, { userId }, userId);
       if (res.ok) {
         const data = await res.json();
-        setWalletBalance(data.balance || 0);
+        setWalletBalance(Number(data.balance || 0));
       } else {
-        console.error('wallet →', await res.text());
+        console.error('wallet →', res.status, await res.text());
+        setWalletBalance(0);
       }
     } catch (e) {
       console.error('Error fetching wallet balance:', e);
+      setWalletBalance(0);
+    }
+  };
+  
+  const fetchOutstanding = async () => {
+    try {
+      const res = await authFetch(`/api/payments/outstanding`, { userId }, userId);
+      if (res.ok) {
+        const data = await res.json();
+        setOutstanding(Number(data.outstanding || 0));
+      }
+    } catch (e) {
+      console.error('outstanding →', e);
+    }
+  };
+  
+  const fetchMySellRequests = async () => {
+    try {
+      const res = await authFetch(`/api/trade/sell-requests`, { userId }, userId);
+      if (res.ok) setSellRequests(await res.json());
+    } catch (e) {
+      console.error('sell-requests →', e);
     }
   };
 
@@ -77,33 +100,21 @@ const Wallet = () => {
     }
   };
 
-  const fetchMySellRequests = async () => {
-    try {
-      const res = await authFetch(`/api/trade/sell-requests`, { userId });
-      if (res.ok) {
-        const data = await res.json();
-        setSellRequests(data || []);
-      } else {
-        console.error('sell-requests →', await res.text());
-      }
-    } catch (e) {
-      console.error('Error fetching sell requests:', e);
-    }
-  };
+  // const fetchMySellRequests = async () => {
+  //   try {
+  //     const res = await authFetch(`/api/trade/sell-requests`, { userId });
+  //     if (res.ok) {
+  //       const data = await res.json();
+  //       setSellRequests(data || []);
+  //     } else {
+  //       console.error('sell-requests →', await res.text());
+  //     }
+  //   } catch (e) {
+  //     console.error('Error fetching sell requests:', e);
+  //   }
+  // };
 
-  const fetchOutstanding = async () => {
-    try {
-      const res = await authFetch(`/api/payments/outstanding`, { userId });
-      if (res.ok) {
-        const data = await res.json();
-        setOutstanding(data.outstanding || 0);
-      } else {
-        console.error('outstanding →', await res.text());
-      }
-    } catch (e) {
-      console.error('Error fetching outstanding:', e);
-    }
-  };
+ 
 
   const selected = availableWaste.find(w => w.type === wasteType);
   const unitPrice = selected ? selected.unitPriceLkr : 0;

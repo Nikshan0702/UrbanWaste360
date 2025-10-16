@@ -399,151 +399,154 @@
 
 // export default WalletPayments;
 
-
+// src/components/WalletPaymentsCardUI.jsx
+// src/components/WalletPaymentsCardUI.jsx
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  FaWallet,
-  FaMoneyBillWave,
-  FaCreditCard,
-  FaHistory,
-  FaShieldAlt,
-  FaCheckCircle,
-} from 'react-icons/fa';
+import { FaWallet, FaMoneyBillWave, FaCreditCard, FaHistory, FaShieldAlt } from 'react-icons/fa';
 
 const API = 'http://localhost:8080';
-
 const isDevToken = (t) => !t || t === 'demo-token' || t === 'null' || t === 'undefined';
 
-const authFetch = async (path, options = {}, userId) => {
+const authFetch = async (path, { method = 'GET', body, headers = {}, userId } = {}) => {
   const token = localStorage.getItem('authToken');
   let url = `${API}${path}`;
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(token && !isDevToken(token) ? { Authorization: `Bearer ${token}` } : {}),
-    ...options.headers,
-  };
-
-  // Dev fallback
-  if (isDevToken(token) && userId && !url.includes('residentId=')) {
+  // In dev (no real JWT), append residentId to avoid 400
+  if (userId && !url.includes('residentId=')) {
     url += (url.includes('?') ? '&' : '?') + `residentId=${encodeURIComponent(userId)}`;
   }
-
-  const res = await fetch(url, { ...options, headers });
-  if (res.status === 400 && isDevToken(token) && userId && !url.includes('residentId=')) {
-    const retryUrl = url + (url.includes('?') ? '&' : '?') + `residentId=${encodeURIComponent(userId)}`;
-    return fetch(retryUrl, { ...options, headers });
-  }
-  return res;
+  const finalHeaders = {
+    'Content-Type': 'application/json',
+    ...(token && !isDevToken(token) ? { Authorization: `Bearer ${token}` } : {}),
+    ...headers,
+  };
+  return fetch(url, {
+    method,
+    headers: finalHeaders,
+    credentials: 'include',
+    ...(body ? { body: typeof body === 'string' ? body : JSON.stringify(body) } : {}),
+  });
 };
 
-const WalletPayments = () => {
+const Card = ({ children, className = '' }) => (
+  <div className={`bg-white border border-gray-100 rounded-2xl shadow-sm ${className}`}>{children}</div>
+);
+const CardHeader = ({ title, icon, right }) => (
+  <div className="px-6 pt-5 pb-3 border-b border-gray-100 flex items-center justify-between">
+    <div className="flex items-center gap-3">
+      <div className="w-10 h-10 rounded-xl bg-gray-50 text-gray-700 flex items-center justify-center">{icon}</div>
+      <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+    </div>
+    {right}
+  </div>
+);
+const CardBody = ({ children }) => <div className="p-6">{children}</div>;
+
+export default function WalletPaymentsCardUI() {
   const [user, setUser] = useState(null);
-  const [walletBalance, setWalletBalance] = useState(0);
+
+  const [wallet, setWallet] = useState(0);
   const [outstanding, setOutstanding] = useState(0);
-  const [paymentHistory, setPaymentHistory] = useState([]);
+  const [history, setHistory] = useState([]);
+
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('WALLET'); // WALLET | CARD
   const [loading, setLoading] = useState(false);
 
-  const [card, setCard] = useState({
-    cardNumber: '',
-    expiryDate: '',
-    cvv: '',
-    cardHolder: '',
-  });
+  const [cardNumber, setCardNumber] = useState('');
+  const [expiry, setExpiry] = useState('');
+  const [cvv, setCvv] = useState('');
+  const [holder, setHolder] = useState('');
 
-  // Load user data
   useEffect(() => {
     const stored = localStorage.getItem('userData');
     if (stored) {
-      try {
-        setUser(JSON.parse(stored));
-      } catch {
-        setUser(null);
-      }
+      try { setUser(JSON.parse(stored)); } catch {}
     }
   }, []);
 
   useEffect(() => {
-    if (user?.id) {
-      fetchWallet();
-      fetchOutstanding();
-      fetchHistory();
-    }
-  }, [user]);
+    if (!user?.id) return;
+    refreshAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  const refreshAll = async () => {
+    await Promise.all([fetchWallet(), fetchOutstanding(), fetchHistory()]);
+  };
 
   const fetchWallet = async () => {
-    const res = await authFetch(`/api/payments/wallet/${user.id}`, {}, user.id);
-    if (res.ok) {
-      const data = await res.json();
-      setWalletBalance(data.balance || 0);
+    // hits /wallet/{id}
+    const r = await authFetch(`/api/payments/wallet/${user.id}`, { userId: user.id });
+    if (r.ok) {
+      const data = await r.json();
+      setWallet(data.balance || 0);
     }
   };
 
   const fetchOutstanding = async () => {
-    const res = await authFetch('/api/payments/outstanding', {}, user.id);
-    if (res.ok) {
-      const data = await res.json();
+    const r = await authFetch(`/api/payments/outstanding`, { userId: user.id });
+    if (r.ok) {
+      const data = await r.json();
       setOutstanding(data.outstanding || 0);
     }
   };
 
   const fetchHistory = async () => {
-    const res = await authFetch(`/api/payments/history/${user.id}`, {}, user.id);
-    if (res.ok) {
-      setPaymentHistory(await res.json());
-    }
+    // hits /history/{id}
+    const r = await authFetch(`/api/payments/history/${user.id}`, { userId: user.id });
+    if (r.ok) setHistory(await r.json());
   };
 
   const totalIncome = useMemo(
-    () => paymentHistory.filter(p => p.type === 'income').reduce((sum, p) => sum + (p.amount || 0), 0),
-    [paymentHistory]
+    () => history.filter(h => h.type === 'income').reduce((s, x) => s + (x.amount || 0), 0),
+    [history]
   );
   const totalPayments = useMemo(
-    () => paymentHistory.filter(p => p.type === 'payment').reduce((sum, p) => sum + (p.amount || 0), 0),
-    [paymentHistory]
+    () => history.filter(h => h.type === 'payment').reduce((s, x) => s + (x.amount || 0), 0),
+    [history]
   );
 
-  const handlePayment = async () => {
+  const fakeTokenize = () => {
+    const last4 = (cardNumber || '').replace(/\s+/g, '').slice(-4);
+    const exp = (expiry || '').replace(/\D/g, '');
+    return last4 ? `tok_${last4}_${exp || 'XXXX'}` : '';
+    // Replace with your PSP’s real tokenization.
+  };
+
+  const pay = async () => {
     const amt = parseFloat(amount);
-    if (!amt || amt <= 0) return alert('Please enter a valid amount');
+    if (!amt || amt <= 0) return alert('Enter a valid amount');
 
-    if (method === 'WALLET' && amt > walletBalance)
-      return alert('Insufficient wallet balance');
+    if (method === 'WALLET') {
+      if (amt > wallet) return alert('Insufficient wallet balance');
+    }
 
-    if (
-      method === 'CARD' &&
-      (!card.cardNumber || !card.expiryDate || !card.cvv || !card.cardHolder)
-    )
-      return alert('Please fill in all card details');
+    let cardToken;
+    if (method === 'CARD') {
+      if (!cardNumber || !expiry || !cvv || !holder) return alert('Enter all card details');
+      cardToken = fakeTokenize();
+    }
 
     setLoading(true);
     try {
-      const body = {
-        userId: user.id,
-        amount: amt,
-        paymentMethod: method,
-        cardDetails: method === 'CARD' ? card : null,
-      };
-
-      const res = await authFetch('/api/payments/settle', {
+      const r = await authFetch(`/api/payments/settle`, {
         method: 'POST',
-        body: JSON.stringify(body),
-      }, user.id);
-
-      if (res.ok) {
-        alert('Payment successful!');
+        userId: user.id, // ensures residentId is appended in dev
+        body: { amount: amt, method, cardToken },
+      });
+      if (r.ok) {
+        const data = await r.json();
+        setOutstanding(data.remaining || 0);
         setAmount('');
-        setCard({ cardNumber: '', expiryDate: '', cvv: '', cardHolder: '' });
-        fetchWallet();
-        fetchOutstanding();
-        fetchHistory();
+        setCardNumber(''); setExpiry(''); setCvv(''); setHolder('');
+        await fetchWallet();
+        await fetchHistory();
+        alert(method === 'WALLET' ? 'Paid with wallet' : 'Card payment successful');
       } else {
-        const err = await res.text();
-        alert(err || 'Payment failed.');
+        alert(await r.text());
       }
-    } catch (e) {
-      alert('Payment error. Please try again.');
+    } catch {
+      alert('Payment failed.');
     } finally {
       setLoading(false);
     }
@@ -551,187 +554,252 @@ const WalletPayments = () => {
 
   if (!user) {
     return (
-      <div className="text-center py-20 text-gray-600">
-        Please log in to access wallet and payment features.
+      <div className="min-h-[60vh] grid place-items-center">
+        <div className="text-center text-gray-600">
+          <div className="text-4xl mb-2">🔒</div>
+          Please log in to access Wallet & Payments.
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-6">
-      <div className="max-w-7xl mx-auto space-y-8">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Wallet & Payments
-        </h1>
+    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto space-y-8">
 
-        {/* KPI cards */}
+        {/* Top KPI cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-emerald-600 text-white p-6 rounded-2xl shadow">
-            <p className="text-emerald-100 text-sm">Wallet Balance</p>
-            <p className="text-3xl font-bold mt-2">LKR {walletBalance.toFixed(2)}</p>
-            <p className="text-emerald-100 text-xs mt-1">Available for payments</p>
+          <div className="rounded-2xl text-white p-6 bg-gradient-to-br from-emerald-500 to-teal-600 shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-white/80 text-sm">Wallet Balance</p>
+                <p className="text-3xl font-bold mt-2">LKR {wallet.toFixed(2)}</p>
+              </div>
+              <FaWallet className="text-4xl opacity-90" />
+            </div>
           </div>
-          <div className="bg-green-600 text-white p-6 rounded-2xl shadow">
-            <p className="text-green-100 text-sm">Total Income</p>
-            <p className="text-3xl font-bold mt-2">LKR {totalIncome.toFixed(2)}</p>
+          <div className="rounded-2xl text-white p-6 bg-gradient-to-br from-green-600 to-green-700 shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-white/80 text-sm">Total Income</p>
+                <p className="text-3xl font-bold mt-2">LKR {totalIncome.toFixed(2)}</p>
+              </div>
+              <FaMoneyBillWave className="text-4xl opacity-90" />
+            </div>
           </div>
-          <div className="bg-indigo-600 text-white p-6 rounded-2xl shadow">
-            <p className="text-indigo-100 text-sm">Total Payments</p>
-            <p className="text-3xl font-bold mt-2">LKR {totalPayments.toFixed(2)}</p>
+          <div className="rounded-2xl text-white p-6 bg-gradient-to-br from-indigo-600 to-indigo-700 shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-white/80 text-sm">Total Payments</p>
+                <p className="text-3xl font-bold mt-2">LKR {totalPayments.toFixed(2)}</p>
+              </div>
+              <FaCreditCard className="text-4xl opacity-90" />
+            </div>
           </div>
         </div>
 
-        {/* Payment and Wallet section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Payment Form */}
-          <div className="bg-white rounded-2xl shadow p-6 border border-gray-100">
-            <h2 className="text-xl font-semibold mb-4">Make Payment</h2>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Amount (LKR)
-              </label>
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
-                placeholder="Enter amount"
-              />
+        {/* Outstanding card */}
+        <Card>
+          <CardHeader
+            title="Outstanding"
+            icon={<span className="text-blue-600">₨</span>}
+            right={<button onClick={fetchOutstanding} className="px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm">Refresh</button>}
+          />
+          <CardBody>
+            <div className="rounded-xl p-5 bg-blue-50 border border-blue-200 flex items-center justify-between">
+              <div>
+                <div className="text-blue-900 font-semibold">Total Due</div>
+                <div className="text-blue-700 text-sm">Pay with wallet or card</div>
+              </div>
+              <div className="text-3xl font-extrabold text-blue-900">LKR {outstanding.toFixed(2)}</div>
             </div>
+          </CardBody>
+        </Card>
 
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <button
-                className={`p-3 rounded-lg border flex items-center justify-center gap-2 ${
-                  method === 'WALLET'
-                    ? 'border-emerald-500 bg-emerald-50'
-                    : 'border-gray-300 hover:bg-gray-100'
-                }`}
-                onClick={() => setMethod('WALLET')}
-              >
-                <FaWallet /> Wallet
-              </button>
-              <button
-                className={`p-3 rounded-lg border flex items-center justify-center gap-2 ${
-                  method === 'CARD'
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-300 hover:bg-gray-100'
-                }`}
-                onClick={() => setMethod('CARD')}
-              >
-                <FaCreditCard /> Card
-              </button>
-            </div>
+        {/* Two payment method cards side-by-side */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Wallet card */}
+          <Card>
+            <CardHeader
+              title="Pay with Wallet"
+              icon={<FaWallet className="text-emerald-600" />}
+              right={<span className="text-xs text-gray-500">Balance: LKR {wallet.toFixed(2)}</span>}
+            />
+            <CardBody>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">Amount (LKR)</label>
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                    placeholder="0.00"
+                  />
+                </div>
+                <button
+                  onClick={() => { setMethod('WALLET'); pay(); }}
+                  disabled={loading || !amount}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-lg font-semibold disabled:opacity-60"
+                >
+                  {loading && method === 'WALLET' ? 'Processing…' : 'Pay from Wallet'}
+                </button>
+              </div>
+            </CardBody>
+          </Card>
 
-            {/* Card Fields */}
-            {method === 'CARD' && (
+          {/* Card card */}
+          <Card>
+            <CardHeader title="Pay with Card" icon={<FaCreditCard className="text-indigo-600" />} />
+            <CardBody>
               <div className="space-y-3">
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">Amount (LKR)</label>
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    placeholder="0.00"
+                  />
+                </div>
                 <input
-                  type="text"
                   placeholder="Card Number"
-                  value={card.cardNumber}
-                  onChange={(e) => setCard({ ...card, cardNumber: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  value={cardNumber}
+                  onChange={(e) => setCardNumber(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                 />
                 <div className="grid grid-cols-2 gap-3">
                   <input
-                    type="text"
                     placeholder="Expiry (MM/YY)"
-                    value={card.expiryDate}
-                    onChange={(e) => setCard({ ...card, expiryDate: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg"
+                    value={expiry}
+                    onChange={(e) => setExpiry(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   />
                   <input
-                    type="text"
                     placeholder="CVV"
-                    value={card.cvv}
-                    onChange={(e) => setCard({ ...card, cvv: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg"
+                    value={cvv}
+                    onChange={(e) => setCvv(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   />
                 </div>
                 <input
-                  type="text"
-                  placeholder="Card Holder Name"
-                  value={card.cardHolder}
-                  onChange={(e) => setCard({ ...card, cardHolder: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  placeholder="Cardholder Name"
+                  value={holder}
+                  onChange={(e) => setHolder(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                 />
+
+                <button
+                  onClick={() => { setMethod('CARD'); pay(); }}
+                  disabled={loading || !amount}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg font-semibold disabled:opacity-60"
+                >
+                  {loading && method === 'CARD' ? 'Processing…' : 'Pay with Card'}
+                </button>
+
+                <p className="text-xs text-gray-500 flex items-center gap-2 mt-2">
+                  <FaShieldAlt className="text-emerald-500" />
+                  We don’t store raw card details. A temporary token is generated and used for this payment.
+                </p>
+              </div>
+            </CardBody>
+          </Card>
+        </div>
+
+        {/* Wallet snapshot + actions */}
+        <Card>
+          <CardHeader
+            title="Wallet Snapshot"
+            icon={<FaWallet className="text-emerald-600" />}
+            right={
+              <div className="flex gap-2">
+                <button onClick={fetchWallet} className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-sm hover:bg-emerald-100">
+                  Refresh Wallet
+                </button>
+                <button onClick={fetchOutstanding} className="px-3 py-1.5 rounded-lg bg-teal-50 text-teal-700 text-sm hover:bg-teal-100">
+                  Refresh Outstanding
+                </button>
+                <button onClick={fetchHistory} className="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 text-sm hover:bg-indigo-100">
+                  Refresh History
+                </button>
+              </div>
+            }
+          />
+          <CardBody>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="rounded-2xl text-white p-6 bg-gradient-to-br from-emerald-500 to-teal-600 shadow">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-white/80 text-sm">Balance</p>
+                    <p className="text-3xl font-bold mt-2">LKR {wallet.toFixed(2)}</p>
+                  </div>
+                  <FaWallet className="text-4xl opacity-90" />
+                </div>
+              </div>
+              <div className="rounded-2xl text-white p-6 bg-gradient-to-br from-green-600 to-green-700 shadow">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-white/80 text-sm">Income</p>
+                    <p className="text-3xl font-bold mt-2">LKR {totalIncome.toFixed(2)}</p>
+                  </div>
+                  <FaMoneyBillWave className="text-4xl opacity-90" />
+                </div>
+              </div>
+              <div className="rounded-2xl text-white p-6 bg-gradient-to-br from-indigo-600 to-indigo-700 shadow">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-white/80 text-sm">Payments</p>
+                    <p className="text-3xl font-bold mt-2">LKR {totalPayments.toFixed(2)}</p>
+                  </div>
+                  <FaCreditCard className="text-4xl opacity-90" />
+                </div>
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+
+        {/* History as cards */}
+        <Card>
+          <CardHeader title="Transaction History" icon={<FaHistory className="text-indigo-600" />} right={
+            <div className="text-sm text-gray-500">Showing {history.length} record{history.length !== 1 ? 's' : ''}</div>
+          } />
+          <CardBody>
+            {history.length === 0 ? (
+              <div className="text-center text-gray-500 py-10">No transactions yet</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {history.map((p) => {
+                  const isIncome = p.type === 'income';
+                  const status = (p.status || '').toUpperCase();
+                  const chip =
+                    status === 'COMPLETED' ? 'text-green-700 bg-green-100' :
+                    status === 'FAILED' ? 'text-rose-700 bg-rose-100' : 'text-yellow-700 bg-yellow-100';
+                  return (
+                    <div key={p.id} className="p-4 rounded-xl border border-gray-200 hover:shadow-sm transition">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isIncome ? 'bg-green-100 text-green-600' : 'bg-rose-100 text-rose-600'}`}>
+                          {isIncome ? <FaMoneyBillWave /> : <FaCreditCard />}
+                        </div>
+                        <div className={`px-2 py-0.5 rounded-full text-xs font-medium ${chip}`}>{status}</div>
+                      </div>
+                      <div className="font-semibold text-gray-900 text-sm">{p.paymentMethod || (isIncome ? 'Credit' : 'Payment')}</div>
+                      <div className={`font-bold mt-1 ${isIncome ? 'text-green-600' : 'text-rose-600'}`}>
+                        {isIncome ? '+' : '-'} LKR {Math.abs(p.amount || 0).toFixed(2)}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">{p.createdAt ? new Date(p.createdAt).toLocaleString() : ''}</div>
+                    </div>
+                  );
+                })}
               </div>
             )}
-
-            <button
-              onClick={handlePayment}
-              disabled={loading}
-              className="w-full bg-emerald-600 text-white py-3 rounded-lg mt-5 hover:bg-emerald-700"
-            >
-              {loading ? 'Processing...' : `Pay LKR ${amount || '0.00'}`}
-            </button>
-          </div>
-
-          {/* Wallet Info */}
-          <div className="bg-white rounded-2xl shadow p-6 border border-gray-100">
-            <h2 className="text-xl font-semibold mb-4">Wallet Overview</h2>
-            <div className="bg-emerald-100 p-4 rounded-lg mb-4">
-              <p className="text-emerald-800 font-semibold">
-                Outstanding: LKR {outstanding.toFixed(2)}
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                fetchWallet();
-                fetchOutstanding();
-              }}
-              className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700"
-            >
-              Refresh Balances
-            </button>
-          </div>
-        </div>
-
-        {/* History */}
-        <div className="bg-white rounded-2xl shadow p-6 border border-gray-100">
-          <h2 className="text-xl font-semibold mb-4">Transaction History</h2>
-          {paymentHistory.length === 0 ? (
-            <p className="text-gray-500 text-center py-6">
-              No transactions found.
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {paymentHistory.map((p) => (
-                <div
-                  key={p.id}
-                  className="border rounded-lg p-4 hover:shadow-md transition"
-                >
-                  <div className="flex justify-between mb-1">
-                    <span className="font-medium text-gray-900">
-                      {p.paymentMethod}
-                    </span>
-                    <span
-                      className={`text-sm font-semibold ${
-                        p.status === 'COMPLETED'
-                          ? 'text-green-600'
-                          : p.status === 'FAILED'
-                          ? 'text-red-600'
-                          : 'text-yellow-600'
-                      }`}
-                    >
-                      {p.status}
-                    </span>
-                  </div>
-                  <p className="text-gray-700">
-                    Amount: LKR {p.amount?.toFixed(2)}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {new Date(p.createdAt).toLocaleString()}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+          </CardBody>
+        </Card>
       </div>
     </div>
   );
-};
-
-export default WalletPayments;
+}
