@@ -550,6 +550,7 @@ import {
 } from 'react-icons/fa';
 import DashboardPage from '../track-monitor/pages/DashboardPage';
 import WasteHistoryPage from '../track-monitor/pages/WasteHistoryPage';
+import RecyclingCredits from '../track-monitor/pages/RecyclingCredits';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -980,7 +981,7 @@ const fetchPaymentHistory = async () => {
       case 'recycling-credit':
         return (
             <div className="space-y-6">
-              
+              <RecyclingCredits/>
             </div>
         );
       

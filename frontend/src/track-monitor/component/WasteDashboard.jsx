@@ -812,7 +812,7 @@ const barOptions = React.useMemo(() => ({
                   onChange={e=>setForm(f=>({...f,notes:e.target.value}))}
                   className="w-full rounded-lg border px-3 py-2"/>
                 <div className="flex gap-2">
-                  <button className="rounded-lg bg-emerald-600 text-white px-4 py-2">{editing ? "Update" : "Create"}</button>
+                  <button className="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-4 py-2">{editing ? "Update" : "Create"}</button>
                   {editing && <button type="button" onClick={()=>setEditing(null)} className="rounded-lg border px-4 py-2">Cancel</button>}
                 </div>
               </form>
@@ -851,7 +851,7 @@ const barOptions = React.useMemo(() => ({
                       <td className="px-3 py-2">{r.notes}</td>
                       <td className="px-3 py-2">
                         <div className="flex gap-2">
-                          <button className="rounded-md bg-slate-800 text-white px-3 py-1"
+                          <button className="rounded-md bg-emerald-500 text-white px-3 py-1"
                             onClick={()=>{ setEditing(r.id || r._id); setForm({ date:r.date?.slice(0,10), type:r.type, quantity:r.quantity, unit:r.unit, notes:r.notes||"" }); }}>
                             Edit
                           </button>
