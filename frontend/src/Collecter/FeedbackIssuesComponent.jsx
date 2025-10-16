@@ -9,7 +9,8 @@ import {
   FaClock,
   FaTimesCircle,
   FaTrash,
-  FaRecycle
+  FaRecycle,
+  FaSync
 } from 'react-icons/fa';
 
 const FeedbackIssuesComponent = ({ userData }) => {
@@ -24,6 +25,7 @@ const FeedbackIssuesComponent = ({ userData }) => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [updatingIssueId, setUpdatingIssueId] = useState(null);
 
   useEffect(() => {
     if (userData?.role === 'collector') {
@@ -36,21 +38,29 @@ const FeedbackIssuesComponent = ({ userData }) => {
     setLoading(true);
     try {
       const token = localStorage.getItem('authToken');
+      console.log('Fetching issues with token:', token ? 'Token exists' : 'No token');
+      
       const response = await fetch('http://localhost:8080/api/issues/all', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
+      
+      console.log('Issues API response status:', response.status);
+      
       if (response.ok) {
         const issuesData = await response.json();
+        console.log('Fetched issues:', issuesData);
         setIssues(issuesData);
       } else {
-        throw new Error('Failed to fetch issues');
+        const errorText = await response.text();
+        console.error('API error response:', errorText);
+        throw new Error(`Failed to fetch issues: ${response.status} ${errorText}`);
       }
     } catch (error) {
       console.error('Error fetching issues:', error);
-      setError('Failed to fetch issues');
+      setError('Failed to fetch issues: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -65,14 +75,18 @@ const FeedbackIssuesComponent = ({ userData }) => {
           'Content-Type': 'application/json'
         }
       });
+      
       if (response.ok) {
         const statistics = await response.json();
+        console.log('Fetched statistics:', statistics);
         setStats({
-          total: statistics.totalIssues,
-          pending: statistics.pendingIssues,
-          inProgress: statistics.inProgressIssues,
-          resolved: statistics.resolvedIssues
+          total: statistics.totalIssues || 0,
+          pending: statistics.pendingIssues || 0,
+          inProgress: statistics.inProgressIssues || 0,
+          resolved: statistics.resolvedIssues || 0
         });
+      } else {
+        console.error('Statistics API error:', response.status);
       }
     } catch (error) {
       console.error('Error fetching statistics:', error);
@@ -80,8 +94,13 @@ const FeedbackIssuesComponent = ({ userData }) => {
   };
 
   const updateIssueStatus = async (issueId, newStatus) => {
+    setUpdatingIssueId(issueId);
+    setError('');
+    
     try {
       const token = localStorage.getItem('authToken');
+      console.log(`Updating issue ${issueId} to status: ${newStatus}`);
+      
       const response = await fetch(`http://localhost:8080/api/issues/${issueId}/status`, {
         method: 'PUT',
         headers: {
@@ -90,21 +109,78 @@ const FeedbackIssuesComponent = ({ userData }) => {
         },
         body: JSON.stringify({
           status: newStatus,
-          adminNotes: `Status updated to ${newStatus}`
+          adminNotes: `Status updated to ${newStatus} by collector`
         })
       });
 
+      console.log('Update response status:', response.status);
+      
       if (response.ok) {
-        // Refresh issues and statistics
-        await fetchAllIssues();
+        const updatedIssue = await response.json();
+        console.log('Updated issue:', updatedIssue);
+        
+        // Update the issue in the local state immediately
+        setIssues(prevIssues => 
+          prevIssues.map(issue => 
+            issue.id === issueId 
+              ? { ...issue, status: newStatus }
+              : issue
+          )
+        );
+        
+        // Also update the selected issue if it's the one being updated
+        if (selectedIssue && selectedIssue.id === issueId) {
+          setSelectedIssue(prev => prev ? { ...prev, status: newStatus } : null);
+        }
+        
+        // Refresh statistics
         await fetchIssueStatistics();
-        setSelectedIssue(null);
+        
+        // Show success message
+        setError(`Issue status updated to ${newStatus} successfully!`);
+        setTimeout(() => setError(''), 3000); // Clear success message after 3 seconds
+        
       } else {
-        throw new Error('Failed to update issue status');
+        const errorText = await response.text();
+        console.error('Update failed:', errorText);
+        throw new Error(`Failed to update issue status: ${response.status} ${errorText}`);
       }
     } catch (error) {
       console.error('Error updating issue status:', error);
-      setError('Failed to update issue status');
+      setError('Failed to update issue status: ' + error.message);
+    } finally {
+      setUpdatingIssueId(null);
+    }
+  };
+
+  // Optimistic update - update UI immediately while waiting for API
+  const handleStatusUpdate = async (issueId, newStatus) => {
+    // Store current state for rollback in case of error
+    const previousIssues = [...issues];
+    const previousSelectedIssue = selectedIssue ? { ...selectedIssue } : null;
+    
+    // Update UI immediately
+    setIssues(prevIssues => 
+      prevIssues.map(issue => 
+        issue.id === issueId 
+          ? { ...issue, status: newStatus }
+          : issue
+      )
+    );
+    
+    if (selectedIssue && selectedIssue.id === issueId) {
+      setSelectedIssue(prev => prev ? { ...prev, status: newStatus } : null);
+    }
+    
+    // Call API
+    try {
+      await updateIssueStatus(issueId, newStatus);
+    } catch (error) {
+      // Rollback on error
+      setIssues(previousIssues);
+      if (previousSelectedIssue) {
+        setSelectedIssue(previousSelectedIssue);
+      }
     }
   };
 
@@ -243,8 +319,9 @@ const FeedbackIssuesComponent = ({ userData }) => {
             <button
               onClick={fetchAllIssues}
               disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
             >
+              {loading ? <FaSync className="animate-spin" /> : <FaSync />}
               {loading ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
@@ -281,6 +358,9 @@ const FeedbackIssuesComponent = ({ userData }) => {
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(issue.status)}`}>
                           {getStatusIcon(issue.status)}
                           <span className="ml-1">{issue.status.replace('_', ' ')}</span>
+                          {updatingIssueId === issue.id && (
+                            <FaSync className="w-3 h-3 ml-1 animate-spin" />
+                          )}
                         </span>
                       </div>
                       <p className="text-gray-600 mb-2 line-clamp-2">{issue.description}</p>
@@ -311,17 +391,29 @@ const FeedbackIssuesComponent = ({ userData }) => {
       </div>
 
       {/* Issue Detail Modal */}
-      <IssueDetailModal
-        issue={selectedIssue}
-        onClose={() => setSelectedIssue(null)}
-        onStatusUpdate={updateIssueStatus}
-      />
+      {selectedIssue && (
+        <IssueDetailModal
+          issue={selectedIssue}
+          onClose={() => setSelectedIssue(null)}
+          onStatusUpdate={handleStatusUpdate}
+          updatingIssueId={updatingIssueId}
+        />
+      )}
 
+      {/* Error/Success Messages */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className={`p-4 rounded-lg ${
+          error.includes('successfully') 
+            ? 'bg-green-50 border border-green-200 text-green-700' 
+            : 'bg-red-50 border border-red-200 text-red-700'
+        }`}>
           <div className="flex items-center">
-            <FaExclamationTriangle className="text-red-400 mr-2" />
-            <p className="text-red-700">{error}</p>
+            {error.includes('successfully') ? (
+              <FaCheck className="text-green-400 mr-2" />
+            ) : (
+              <FaExclamationTriangle className="text-red-400 mr-2" />
+            )}
+            <p>{error}</p>
           </div>
         </div>
       )}
@@ -330,7 +422,7 @@ const FeedbackIssuesComponent = ({ userData }) => {
 };
 
 // Issue Detail Modal Component
-const IssueDetailModal = ({ issue, onClose, onStatusUpdate }) => {
+const IssueDetailModal = ({ issue, onClose, onStatusUpdate, updatingIssueId }) => {
   if (!issue) return null;
 
   const getStatusColor = (status) => {
@@ -389,7 +481,11 @@ const IssueDetailModal = ({ issue, onClose, onStatusUpdate }) => {
         <div className="p-6 border-b">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-800">Issue Details</h2>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <button 
+              onClick={onClose} 
+              className="text-gray-400 hover:text-gray-600"
+              disabled={updatingIssueId === issue.id}
+            >
               <FaTimesCircle className="w-6 h-6" />
             </button>
           </div>
@@ -409,6 +505,9 @@ const IssueDetailModal = ({ issue, onClose, onStatusUpdate }) => {
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(issue.status)}`}>
                   {getStatusIcon(issue.status)}
                   <span className="ml-1">{issue.status.replace('_', ' ')}</span>
+                  {updatingIssueId === issue.id && (
+                    <FaSync className="w-3 h-3 ml-1 animate-spin" />
+                  )}
                 </span>
               </div>
             </div>
@@ -444,28 +543,34 @@ const IssueDetailModal = ({ issue, onClose, onStatusUpdate }) => {
           {/* Status Update */}
           <div>
             <h4 className="font-medium text-gray-700 mb-3">Update Status</h4>
-            <div className="flex space-x-3">
+            <div className="flex flex-wrap gap-3">
               {issue.status !== 'IN_PROGRESS' && (
                 <button
                   onClick={() => onStatusUpdate(issue.id, 'IN_PROGRESS')}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  disabled={updatingIssueId === issue.id}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors flex items-center gap-2"
                 >
+                  {updatingIssueId === issue.id && <FaSync className="animate-spin" />}
                   Mark In Progress
                 </button>
               )}
               {issue.status !== 'RESOLVED' && (
                 <button
                   onClick={() => onStatusUpdate(issue.id, 'RESOLVED')}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  disabled={updatingIssueId === issue.id}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 transition-colors flex items-center gap-2"
                 >
+                  {updatingIssueId === issue.id && <FaSync className="animate-spin" />}
                   Mark Resolved
                 </button>
               )}
               {issue.status !== 'PENDING' && (
                 <button
                   onClick={() => onStatusUpdate(issue.id, 'PENDING')}
-                  className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+                  disabled={updatingIssueId === issue.id}
+                  className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:bg-gray-400 transition-colors flex items-center gap-2"
                 >
+                  {updatingIssueId === issue.id && <FaSync className="animate-spin" />}
                   Reopen
                 </button>
               )}

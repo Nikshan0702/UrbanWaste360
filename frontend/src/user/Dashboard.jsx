@@ -30,6 +30,7 @@ import WasteHistoryPage from '../track-monitor/pages/WasteHistoryPage';
 import RecyclingCredits from '../track-monitor/pages/RecyclingCredits';
 import Wallet from '../payment/Wallet';
 import WalletPayments from '../payment/alletPayments';
+import SpecialPickupComponent from './SpecialPickupComponent';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -770,6 +771,13 @@ const Dashboard = () => {
         case 'Wallet':        return (
           <div className="space-y-6">
             <Wallet/>
+          </div>
+        );
+
+      case 'schedule':
+        return (
+          <div className="space-y-6">
+            <SpecialPickupComponent userData={displayData} />
           </div>
         );
 
