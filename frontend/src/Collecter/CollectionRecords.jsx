@@ -85,6 +85,7 @@ const CollectionRecords = () => {
                     ))}
                 </tbody>
             </table>
+          
         </div>
     );
 };

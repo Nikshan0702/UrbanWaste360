@@ -71,6 +71,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/**").hasRole("collector")
                 .requestMatchers("/api/bins/**").hasRole("collector")
                 .requestMatchers("/api/collection-records/**").hasRole("collector")
+                .requestMatchers("/api/v1/bins/**").hasRole("collector")
                 
                 .anyRequest().authenticated()
             )

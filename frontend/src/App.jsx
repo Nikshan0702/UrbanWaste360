@@ -11,6 +11,7 @@ import ConfirmationPage from './Collecter/ConfirmationPage';
 import CollecterDashBoard from './Collecter/Collectiondashboard';
 import NearbyBins from './Collecter/NearbyBinsComponent';
 import CollectionRecords from './Collecter/CollectionRecords';
+import Bin from './Collecter/Bin';
 
 function App() {
   return (
@@ -28,7 +29,8 @@ function App() {
           <Route path="/confirmation" element={<ConfirmationPage />} />
           <Route path="/CollecterDashBoard" element={<CollecterDashBoard />} />
           <Route path="/NearbyBins" element={<NearbyBins />} />    
-          <Route path="/CollectionRecords" element={<CollectionRecords />} />         
+          <Route path="/CollectionRecords" element={<CollectionRecords />} /> 
+          <Route path="/Bin" element={<Bin />} />        
 
           <Route path="*" element={<div className="p-10">404 Not Found</div>} />
           </Routes>

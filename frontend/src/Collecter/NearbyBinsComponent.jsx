@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-
+import Bin from "../Collecter/Bin";
 const zones = [
   "Colombo 07 - Cinnamon Gardens",
   "Kotte - Nugegoda",
@@ -169,6 +169,7 @@ const NearbyBins = () => {
           </div>
         ))}
       </div>
+        <Bin/>
     </div>
   );
 };

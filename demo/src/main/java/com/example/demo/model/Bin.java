@@ -10,7 +10,7 @@ public class Bin {
     private String binId; 
     private String location;
     private String status;
-    private String assignedCollectorId;
+    private String assignedCollectorId = "COL001";
     public Bin() {}
     
     public String getId() { return id; }
