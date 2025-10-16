@@ -25,6 +25,10 @@ import {
   FaEye,
   FaComment
 } from 'react-icons/fa';
+// import DashboardPage from '../track-monitor/pages/DashboardPage';
+// import WasteHistoryPage from '../track-monitor/pages/WasteHistoryPage';
+// import RecyclingCredits from '../track-monitor/pages/RecyclingCredits';
+import SpecialPickupComponent from './SpecialPickupComponent';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -1083,6 +1087,13 @@ const Dashboard = () => {
                 </div>
               </div>
             </div>
+          </div>
+        );
+
+      case 'schedule':
+        return (
+          <div className="space-y-6">
+            <SpecialPickupComponent userData={displayData} />
           </div>
         );
 
