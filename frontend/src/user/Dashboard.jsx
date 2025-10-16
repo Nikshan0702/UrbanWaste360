@@ -28,6 +28,8 @@ import {
 import DashboardPage from '../track-monitor/pages/DashboardPage';
 import WasteHistoryPage from '../track-monitor/pages/WasteHistoryPage';
 import RecyclingCredits from '../track-monitor/pages/RecyclingCredits';
+import Wallet from '../payment/Wallet';
+import WalletPayments from '../payment/alletPayments';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -693,23 +695,14 @@ const Dashboard = () => {
               <WasteHistoryPage/>
             </div>
         );
-        
-      
-      
+       
       case 'recycling-credit':
         return (
             <div className="space-y-6">
               <RecyclingCredits/>
             </div>
         );
-      
-      
-      
-      
-      
-      
-      
-      
+           
       case 'profile':
         return (
           <div className="bg-white rounded-lg shadow p-6">
@@ -768,352 +761,15 @@ const Dashboard = () => {
         
       case 'payments':
         return (
-          <div className="min-h-screen bg-gray-50 py-6 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-7xl mx-auto">
-              {/* Financial Overview Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl shadow-lg p-6 text-white">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-blue-100 text-sm font-medium">Wallet Balance</p>
-                      <p className="text-3xl font-bold mt-2">LKR {walletBalance.toFixed(2)}</p>
-                      <p className="text-blue-100 text-xs mt-2">Available for payments</p>
-                    </div>
-                    <div className="text-4xl text-blue-200">
-                      <FaWallet />
-                    </div>
-                  </div>
-                </div>
+          <div className="min-h-screen bg-gray-50 py-6 px-4 sm:px-6 mb-10 lg:px-8">
+          <WalletPayments/>
+          </div>
+        );
 
-                <div className="bg-gradient-to-br from-green-600 to-green-700 rounded-xl shadow-lg p-6 text-white">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-green-100 text-sm font-medium">Total Income</p>
-                      <p className="text-3xl font-bold mt-2">LKR {totalIncome.toFixed(2)}</p>
-                      <p className="text-green-100 text-xs mt-2">From waste sales</p>
-                    </div>
-                    <div className="text-4xl text-green-200">
-                      <FaMoneyBillWave />
-                    </div>
-                  </div>
-                </div>
 
-                <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl shadow-lg p-6 text-white">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-purple-100 text-sm font-medium">Total Payments</p>
-                      <p className="text-3xl font-bold mt-2">LKR {totalPayments.toFixed(2)}</p>
-                      <p className="text-purple-100 text-xs mt-2">Service fees paid</p>
-                    </div>
-                    <div className="text-4xl text-purple-200">
-                      <FaCreditCard />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                {/* Waste Selling */}
-                <div className="space-y-6">
-                  <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
-                    <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                      <FaRecycle className="text-green-600" />
-                      Sell Your Waste
-                    </h2>
-                    
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Waste Type
-                        </label>
-                        <select
-                          value={wasteType}
-                          onChange={(e) => setWasteType(e.target.value)}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                        >
-                          <option value="plastic">Plastic - LKR 50/kg</option>
-                          <option value="paper">Paper - LKR 30/kg</option>
-                          <option value="metal">Metal - LKR 80/kg</option>
-                          <option value="glass">Glass - LKR 40/kg</option>
-                          <option value="organic">Organic - LKR 20/kg</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Amount (kg)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          min="0.1"
-                          placeholder="Enter amount in kg"
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                          value={wasteAmount}
-                          onChange={(e) => setWasteAmount(e.target.value)}
-                        />
-                      </div>
-
-                      {wasteAmount && (
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <p className="text-green-800 font-semibold text-sm">Estimated Value</p>
-                              <p className="text-green-600 text-xs">
-                                Based on current market rates
-                              </p>
-                            </div>
-                            <div className="text-green-600 font-bold text-lg">
-                              LKR {calculateEstimatedValue().toFixed(2)}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      <button
-                        onClick={handleSellWaste}
-                        disabled={!wasteAmount || parseFloat(wasteAmount) <= 0 || wasteLoading}
-                        className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white py-3 px-4 rounded-lg font-semibold text-base transition-colors duration-200 mt-6 shadow-sm flex items-center justify-center gap-2"
-                      >
-                        <FaRecycle className="w-4 h-4" />
-                        {wasteLoading ? 'Processing...' : `Sell Waste - LKR ${calculateEstimatedValue().toFixed(2)}`}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Payment Processing */}
-                <div className="space-y-6">
-                  <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
-                    <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                      <FaCreditCard className="text-blue-600" />
-                      Make Payment
-                    </h2>
-
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <FaWallet className="text-blue-600" />
-                          <span className="font-semibold text-blue-800">Current Balance</span>
-                        </div>
-                        <span className="text-2xl font-bold text-blue-600">
-                          LKR {walletBalance.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="mb-6">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Payment Amount (LKR)
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        placeholder="Enter amount to pay"
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                        value={totalAmount}
-                        onChange={(e) => setTotalAmount(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="space-y-3 mb-6">
-                      <h3 className="font-semibold text-gray-700 mb-3">Select Payment Method</h3>
-                      {paymentMethods.map((method) => {
-                        const IconComponent = method.icon;
-                        return (
-                          <button
-                            key={method.id}
-                            onClick={() => setSelectedMethod(method.id)}
-                            className={`w-full p-4 border-2 rounded-xl transition-all duration-200 text-left ${
-                              selectedMethod === method.id
-                                ? 'border-blue-500 bg-blue-50 shadow-md'
-                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                            }`}
-                          >
-                            <div className="flex items-center space-x-4">
-                              <div className={`p-3 rounded-lg text-xl ${
-                                selectedMethod === method.id ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'
-                              }`}>
-                                <IconComponent />
-                              </div>
-                              <div className="flex-1">
-                                <span className="font-semibold text-gray-900">{method.name}</span>
-                                {method.id === 'wallet' && (
-                                  <p className="text-sm text-gray-500 mt-1">
-                                    Available: LKR {walletBalance.toFixed(2)}
-                                  </p>
-                                )}
-                              </div>
-                              {selectedMethod === method.id && (
-                                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-                                  <FaCheckCircle className="w-3 h-3 text-white" />
-                                </div>
-                              )}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {selectedMethod === 'card' && (
-                      <div className="space-y-4 border-t border-gray-200 pt-6">
-                        <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-5 text-white">
-                          <div className="flex justify-between items-start mb-6">
-                            <div className="text-lg font-bold">Credit Card</div>
-                            <div className="text-2xl">💳</div>
-                          </div>
-                          <div className="text-xl font-mono tracking-wider mb-6">
-                            {cardDetails.cardNumber || '•••• •••• •••• ••••'}
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <div>
-                              <p className="text-gray-400">Card Holder</p>
-                              <p className="font-semibold">{cardDetails.cardHolder || 'Your Name'}</p>
-                            </div>
-                            <div>
-                              <p className="text-gray-400">Expires</p>
-                              <p className="font-semibold">{cardDetails.expiryDate || 'MM/YY'}</p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Card Number
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="1234 5678 9012 3456"
-                              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
-                              value={cardDetails.cardNumber}
-                              onChange={(e) => handleCardInputChange('cardNumber', e.target.value)}
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Expiry Date
-                              </label>
-                              <input
-                                type="text"
-                                placeholder="MM/YY"
-                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
-                                value={cardDetails.expiryDate}
-                                onChange={(e) => handleCardInputChange('expiryDate', e.target.value)}
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                CVV
-                              </label>
-                              <input
-                                type="text"
-                                placeholder="123"
-                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
-                                value={cardDetails.cvv}
-                                onChange={(e) => handleCardInputChange('cvv', e.target.value)}
-                              />
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Card Holder Name
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="John Doe"
-                              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
-                              value={cardDetails.cardHolder}
-                              onChange={(e) => handleCardInputChange('cardHolder', e.target.value)}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    <button
-                      onClick={handlePayment}
-                      disabled={!totalAmount || parseFloat(totalAmount) <= 0}
-                      className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white py-4 px-6 rounded-xl font-bold text-lg transition-all duration-200 mt-6 shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center justify-center gap-2"
-                    >
-                      <FaCreditCard className="w-5 h-5" />
-                      Pay LKR {totalAmount ? parseFloat(totalAmount).toFixed(2) : '0.00'}
-                    </button>
-
-                    <div className="text-center mt-4">
-                      <p className="text-gray-500 text-sm flex items-center justify-center gap-2">
-                        <FaShieldAlt className="text-blue-500" />
-                        Your payment is secure and encrypted
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Transaction History */}
-                <div className="space-y-6">
-                  <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                        <FaHistory className="text-purple-600" />
-                        Transaction History
-                      </h2>
-                      <button
-                        onClick={fetchPaymentHistory}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-2"
-                      >
-                        Refresh
-                      </button>
-                    </div>
-                    
-                    <div className="space-y-4 max-h-96 overflow-y-auto">
-                      {paymentHistory.length === 0 ? (
-                        <div className="text-center py-8">
-                          <FaFileAlt className="text-4xl text-gray-400 mb-2 mx-auto" />
-                          <p className="text-gray-500 text-sm">No transactions yet</p>
-                        </div>
-                      ) : (
-                        paymentHistory.map((payment) => (
-                          <div key={payment.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
-                            <div className="flex items-center space-x-3">
-                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                                payment.type === 'income' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
-                              }`}>
-                                {payment.type === 'income' ? <FaMoneyBillWave className="w-5 h-5" /> : <FaCreditCard className="w-5 h-5" />}
-                              </div>
-                              <div>
-                                <p className="font-semibold text-gray-900 text-sm">{payment.description}</p>
-                                <p className="text-xs text-gray-500">{new Date(payment.createdAt).toLocaleDateString()}</p>
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                                  payment.status.toLowerCase() === 'completed' ? 'text-green-600 bg-green-100' :
-                                  payment.status.toLowerCase() === 'failed' ? 'text-red-600 bg-red-100' :
-                                  'text-yellow-600 bg-yellow-100'
-                                }`}>
-                                  {payment.status.toLowerCase() === 'completed' && <FaCheckCircle className="w-3 h-3 mr-1" />}
-                                  {payment.status.toLowerCase() === 'failed' && <FaTimesCircle className="w-3 h-3 mr-1" />}
-                                  {payment.status.toLowerCase() === 'pending' && <FaClock className="w-3 h-3 mr-1" />}
-                                  {payment.status}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className={`font-bold text-sm ${
-                                payment.type === 'income' ? 'text-green-600' : 'text-red-600'
-                              }`}>
-                                {payment.type === 'income' ? '+' : '-'}LKR {Math.abs(payment.amount).toFixed(2)}
-                              </p>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+        case 'Wallet':        return (
+          <div className="space-y-6">
+            <Wallet/>
           </div>
         );
 
@@ -1472,9 +1128,11 @@ const Dashboard = () => {
                 { id: 'waste-history', label: 'Waste History', icon: FaTrash },
                 { id: 'recycling-credit', label: 'Recycling Credit', icon: FaRecycle },
                 { id: 'reports', label: 'Reports', icon: FaFileAlt },
+                { id: 'Wallet', label: 'Wallet', icon: FaUser },
                 { id: 'payments', label: 'Payments', icon: FaCreditCard },
                 { id: 'schedule', label: 'Schedule', icon: FaCalendarAlt },
                 { id: 'profile', label: 'Profile', icon: FaUser },
+               
                 { id: 'feedback', label: 'Feedback & Issues', icon: FaExclamationTriangle },
               ].map((item) => {
                 const IconComponent = item.icon;

@@ -44,30 +44,79 @@ const Authentication = () => {
   // =========================
   // UPDATED: role-based redirect
   // =========================
+  // const handleLogin = async () => {
+  //   const loginData = {
+  //     email: formData.email,
+  //     password: formData.password
+  //   };
+
+  //   const response = await fetch(`${API_BASE_URL}/login`, {
+  //     method: 'POST',
+  //     headers: { 'Content-Type': 'application/json' },
+  //     body: JSON.stringify(loginData)
+  //   });
+
+  //   if (!response.ok) {
+  //     const errorText = await response.text();
+  //     throw new Error(errorText || 'Login failed!');
+  //   }
+
+  //   const data = await response.json();
+  //   const token = data.token || data.jwtToken;
+  //   if (!token) throw new Error('No token returned from server');
+  //   console.log('Login successful:', data);
+
+  //   // Persist auth/session
+  //   const role = (data.role || 'user').toLowerCase(); // e.g., 'collector' | 'admin' | 'user'
+  //   localStorage.setItem('authToken', data.token || data.jwtToken || 'demo-token');
+  //   localStorage.setItem('userData', JSON.stringify({
+  //     name: data.name || formData.email,
+  //     email: formData.email,
+  //     role,
+  //     id: data.id || data.userId
+  //   }));
+
+  //   // Role-based navigation
+  //   switch (role) {
+  //     case 'collector':
+  //       navigate('/CollecterDashBoard');
+  //       break;
+  //     case 'admin':
+  //       navigate('/admin');
+  //       break;
+  //     default:
+  //       navigate('/dashboard');
+  //   }
+  // };
+
+
+
+
+
   const handleLogin = async () => {
     const loginData = {
       email: formData.email,
       password: formData.password
     };
-
+  
     const response = await fetch(`${API_BASE_URL}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(loginData)
     });
-
+  
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(errorText || 'Login failed!');
     }
-
+  
     const data = await response.json();
     const token = data.token || data.jwtToken;
     if (!token) throw new Error('No token returned from server');
     console.log('Login successful:', data);
-
+  
     // Persist auth/session
-    const role = (data.role || 'user').toLowerCase(); // e.g., 'collector' | 'admin' | 'user'
+    const role = (data.role || 'user').toLowerCase(); // 'collector' | 'admin' | 'user'
     localStorage.setItem('authToken', data.token || data.jwtToken || 'demo-token');
     localStorage.setItem('userData', JSON.stringify({
       name: data.name || formData.email,
@@ -75,19 +124,22 @@ const Authentication = () => {
       role,
       id: data.id || data.userId
     }));
-
-    // Role-based navigation
-    switch (role) {
-      case 'collector':
-        navigate('/CollecterDashBoard');
-        break;
-      case 'admin':
-        navigate('/admin');
-        break;
-      default:
-        navigate('/dashboard');
-    }
+  
+    // Route mapping (admin → Admin Dashboard)
+    const ROUTES = {
+      admin: '/AdminDashboard',          // <-- updated for Admin Dashboard
+      collector: '/CollecterDashBoard',
+      user: '/Dashboard'
+    };
+  
+    navigate(ROUTES[role] || ROUTES.user);
   };
+
+
+
+
+
+
 
   const handleRegister = async () => {
     // Frontend validation
