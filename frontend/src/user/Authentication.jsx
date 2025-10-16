@@ -62,6 +62,9 @@ const Authentication = () => {
     }
 
     const data = await response.json();
+    const token = data.token || data.jwtToken;
+    if (!token) throw new Error('No token returned from server');
+    console.log('Login successful:', data);
 
     // Persist auth/session
     const role = (data.role || 'user').toLowerCase(); // e.g., 'collector' | 'admin' | 'user'

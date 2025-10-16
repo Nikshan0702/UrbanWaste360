@@ -12,11 +12,13 @@ import CollecterDashBoard from './Collecter/Collectiondashboard';
 import NearbyBins from './Collecter/NearbyBinsComponent';
 import CollectionRecords from './Collecter/CollectionRecords';
 import Bin from './Collecter/Bin';
+import { Toaster } from 'react-hot-toast';
+
 
 function App() {
   return (
     <BrowserRouter>
-    
+          <Toaster position="top-center" />
           <Routes>
           <Route path="/Authentication" element={<Authentication />} />
           <Route path="/Dashboard" element={<Dashboard />} />
