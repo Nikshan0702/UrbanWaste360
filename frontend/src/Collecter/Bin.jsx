@@ -155,7 +155,7 @@ function Bin() {
             />
             <button
               onClick={updateBin}
-              className="w-full p-2 bg-green-500 text-white rounded-md mt-4 hover:bg-green-600"
+              className="w-full p-2 bg-blue-500 text-white rounded-md mt-4 hover:bg-blue-600"
             >
               Update Bin
             </button>
@@ -181,7 +181,7 @@ function Bin() {
             <div className="mt-4 flex space-x-4">
               <button
                 onClick={() => startEditing(bin)}
-                className="p-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600"
+                className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
               >
                 Edit
               </button>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Bin from "../Collecter/Bin";
+
 const zones = [
   "Colombo 07 - Cinnamon Gardens",
   "Kotte - Nugegoda",
@@ -82,7 +83,7 @@ const NearbyBins = () => {
       case "pending":
         return "bg-yellow-100 text-yellow-800";
       case "collected":
-        return "bg-green-100 text-green-800";
+        return "bg-blue-100 text-blue-800"; // Changed to blue
       case "missed":
         return "bg-red-100 text-red-800";
       default:
@@ -100,7 +101,7 @@ const NearbyBins = () => {
         placeholder="Search by Bin ID or scan QR..."
         value={searchTerm}
         onChange={handleSearchChange}
-        className="w-full max-w-md px-4 py-2 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400"
+        className="w-full max-w-md px-4 py-2 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400" // Changed focus ring to blue
       />
 
       {/* Zone buttons */}
@@ -111,9 +112,9 @@ const NearbyBins = () => {
             onClick={() => handleZoneClick(zone)}
             className={`px-4 py-2 rounded-md border ${
               selectedZone === zone
-                ? "bg-green-500 text-white"
+                ? "bg-blue-500 text-white" // Changed to blue
                 : "bg-white text-gray-800 border-gray-300"
-            } hover:bg-green-400 hover:text-white transition`}
+            } hover:bg-blue-400 hover:text-white transition`} // Changed to blue hover
           >
             {zone}
           </button>
@@ -121,8 +122,8 @@ const NearbyBins = () => {
         <button
           onClick={handleAllClick}
           className={`px-4 py-2 rounded-md border ${
-            selectedZone === "" ? "bg-green-500 text-white" : "bg-white text-gray-800 border-gray-300"
-          } hover:bg-green-400 hover:text-white transition`}
+            selectedZone === "" ? "bg-blue-500 text-white" : "bg-white text-gray-800 border-gray-300"
+          } hover:bg-blue-400 hover:text-white transition`} // Changed to blue hover
         >
           All
         </button>
@@ -149,9 +150,9 @@ const NearbyBins = () => {
                   onClick={() => handleStatusClick(bin.binId, status)}
                   className={`px-4 py-2 rounded-md border ${
                     bin.status === status
-                      ? "bg-blue-500 text-white"
+                      ? "bg-blue-500 text-white" // Changed to blue
                       : "bg-white text-gray-800 border-gray-300"
-                  } hover:bg-blue-400 hover:text-white transition`}
+                  } hover:bg-blue-400 hover:text-white transition`} // Changed to blue hover
                 >
                   {status}
                 </button>
@@ -169,7 +170,7 @@ const NearbyBins = () => {
           </div>
         ))}
       </div>
-        <Bin/>
+      <Bin />
     </div>
   );
 };

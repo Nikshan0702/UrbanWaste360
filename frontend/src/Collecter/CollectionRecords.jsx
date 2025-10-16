@@ -50,10 +50,10 @@ const CollectionRecords = () => {
 
             {loading && <p className="text-center text-gray-500">Loading...</p>}
             {error && <p className="text-center text-red-500">{error}</p>}
-            {message && <p className="text-center text-green-600">{message}</p>}
+            {message && <p className="text-center text-blue-600">{message}</p>}
 
             <table className="min-w-full bg-white border border-gray-300 shadow-md mt-6 rounded-lg">
-                <thead className="bg-gray-100">
+                <thead className="bg-blue-600 text-white">
                     <tr>
                         <th className="px-4 py-2 text-left text-gray-700 font-semibold">Bin ID</th>
                         <th className="px-4 py-2 text-left text-gray-700 font-semibold">Collector ID</th>
@@ -66,7 +66,7 @@ const CollectionRecords = () => {
                 </thead>
                 <tbody>
                     {records.map((record) => (
-                        <tr key={record.id} className="border-t hover:bg-gray-50">
+                        <tr key={record.id} className="border-t hover:bg-blue-50">
                             <td className="px-4 py-2 text-gray-700">{record.binId}</td>
                             <td className="px-4 py-2 text-gray-700">{record.collectorId}</td>
                             <td className="px-4 py-2 text-gray-700">{record.status}</td>
@@ -85,7 +85,6 @@ const CollectionRecords = () => {
                     ))}
                 </tbody>
             </table>
-          
         </div>
     );
 };

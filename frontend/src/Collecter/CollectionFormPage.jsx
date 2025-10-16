@@ -36,14 +36,14 @@ export default function CollectionFormPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-green-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-50">
 
       {/* MAIN */}
       <main className="mx-auto max-w-6xl px-4 py-10">
         {/* Back Button */}
         <button
           onClick={() => navigate(-1)}
-          className="mb-6 inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500 text-white shadow hover:bg-emerald-600 transition"
+          className="mb-6 inline-flex h-9 w-9 items-center justify-center rounded-full bg-blue-500 text-white shadow hover:bg-blue-600 transition"
           aria-label="Back"
           title="Back"
         >
@@ -62,7 +62,7 @@ export default function CollectionFormPage() {
         {/* Title */}
         <h2 className="mb-8 text-center text-2xl font-semibold text-slate-800 sm:text-[26px]">
           Current Route –{" "}
-          <span className="text-emerald-600">{routeName}</span>
+          <span className="text-blue-600">{routeName}</span>
         </h2>
 
         {/* Main Card */}
@@ -129,13 +129,13 @@ export default function CollectionFormPage() {
               <div className="flex gap-3">
                 <button
                   onClick={handleSubmit}
-                  className="flex-1 rounded-lg bg-emerald-500 px-4 py-2 text-white shadow hover:bg-emerald-700 transition"
+                  className="flex-1 rounded-lg bg-blue-500 px-4 py-2 text-white shadow hover:bg-blue-700 transition"
                 >
                   Submit
                 </button>
                 <button
                   onClick={() => navigate(-1)}
-                  className="flex-1 rounded-lg bg-emerald-100 px-4 py-2 text-slate-800 hover:bg-emerald-200 transition"
+                  className="flex-1 rounded-lg bg-blue-100 px-4 py-2 text-slate-800 hover:bg-blue-200 transition"
                 >
                   Cancel
                 </button>
@@ -154,7 +154,7 @@ export default function CollectionFormPage() {
                   height="60"
                   stroke="currentColor"
                   strokeWidth="1.5"
-                  className="text-emerald-600"
+                  className="text-blue-600"
                   fill="none"
                 >
                   <path d="M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3z" />
@@ -169,7 +169,7 @@ export default function CollectionFormPage() {
               <button
                 type="button"
                 // onClick={() => navigate("/scan")}
-                className="rounded-lg bg-emerald-500 px-5 py-2 text-white shadow hover:bg-emerald-700 transition"
+                className="rounded-lg bg-blue-500 px-5 py-2 text-white shadow hover:bg-blue-700 transition"
               >
                 Scan Bin
               </button>

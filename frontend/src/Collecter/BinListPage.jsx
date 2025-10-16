@@ -22,13 +22,13 @@ export default function BinListPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-green-50 font-poppins">
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-50 font-poppins">
       {/* Main Content */}
       <main className="mx-auto max-w-6xl px-4 py-10">
 
         <button
           onClick={() => navigate(-1)}
-          className="mb-6 inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500 text-white shadow hover:bg-emerald-600 transition"
+          className="mb-6 inline-flex h-9 w-9 items-center justify-center rounded-full bg-blue-500 text-white shadow hover:bg-blue-600 transition"
           aria-label="Back"
           title="Back"
         >
@@ -44,12 +44,11 @@ export default function BinListPage() {
           </svg>
         </button>
 
-        
         {/* Page Title */}
         <div className="mb-8 text-center">
           <h2 className="text-3xl font-semibold text-slate-800 mb-2">
             🗑️ Bins in{" "}
-            <span className="text-emerald-600">
+            <span className="text-blue-600">
               {zone || "All Zones"}
             </span>
           </h2>
@@ -65,7 +64,7 @@ export default function BinListPage() {
             placeholder="🔍 Search Bin ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full max-w-md rounded-lg border border-slate-300 bg-white px-4 py-2 shadow-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition"
+            className="w-full max-w-md rounded-lg border border-slate-300 bg-white px-4 py-2 shadow-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
           />
         </div>
 
@@ -77,7 +76,7 @@ export default function BinListPage() {
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
             <table className="w-full text-sm text-slate-700">
-              <thead className="bg-emerald-600 text-white text-left">
+              <thead className="bg-blue-600 text-white text-left">
                 <tr>
                   <th className="p-3">Bin ID</th>
                   <th className="p-3">Status</th>
@@ -89,7 +88,7 @@ export default function BinListPage() {
                 {filteredBins.map((bin, i) => (
                   <tr
                     key={i}
-                    className={`border-t hover:bg-emerald-50 transition ${
+                    className={`border-t hover:bg-blue-50 transition ${
                       i % 2 === 0 ? "bg-slate-50" : "bg-white"
                     }`}
                   >
@@ -100,7 +99,7 @@ export default function BinListPage() {
                           bin.status.toLowerCase() === "full"
                             ? "bg-red-100 text-red-700"
                             : bin.status.toLowerCase() === "collected"
-                            ? "bg-green-100 text-green-700"
+                            ? "bg-blue-100 text-blue-700"
                             : "bg-yellow-100 text-yellow-700"
                         }`}
                       >
@@ -111,7 +110,7 @@ export default function BinListPage() {
                     <td className="p-3 text-center">
                       <button
                         onClick={() => navigate("/collection-form", { state: { bin } })}
-                        className="rounded-lg bg-emerald-500 px-4 py-2 text-white text-sm font-medium shadow hover:bg-emerald-600 transition"
+                        className="rounded-lg bg-blue-500 px-4 py-2 text-white text-sm font-medium shadow hover:bg-blue-600 transition"
                       >
                         Collect
                       </button>
