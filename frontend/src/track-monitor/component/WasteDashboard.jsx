@@ -486,12 +486,13 @@ const barOptions = React.useMemo(() => ({
       },
     });
 
+
     if (!res.ok) {
       const errText = await res.text();
       throw new Error(errText || `${res.status} ${res.statusText}`);
     }
 
-    const data = await res.json();
+    const data = await WasteAPI.list(userId ? { residentId: userId } : {});
     setAllRecords(Array.isArray(data) ? data : []);
     setRecords(applyLocalFilters(Array.isArray(data) ? data : []));
 
