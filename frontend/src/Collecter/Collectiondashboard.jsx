@@ -3,24 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import ZoneSelection from './ZoneSelectionPage';
 import NearbyBinsComponent from './NearbyBinsComponent';
 import CollectionRecords from './CollectionRecords';
+import FeedbackIssuesComponent from './FeedbackIssuesComponent';
 import { 
-  FaWallet, 
-  FaMoneyBillWave, 
-  FaCreditCard, 
-  FaHistory, 
   FaRecycle, 
   FaTrash, 
-  FaPaperPlane, 
-  FaCog, 
   FaUser, 
   FaSignOutAlt,
-  FaCheckCircle,
-  FaTimesCircle,
-  FaClock,
-  FaShieldAlt,
   FaChartLine,
   FaCalendarAlt,
-  FaFileAlt
+  FaHistory,
+  FaExclamationTriangle
 } from 'react-icons/fa';
 
 const Dashboard = () => {
@@ -34,7 +26,7 @@ const Dashboard = () => {
   const [collectionData, setCollectionData] = useState([]);
   const [routesData, setRoutesData] = useState([]);
 
-  const [userId, setUserId] = useState('user123'); // You can get this from auth context
+  const [userId, setUserId] = useState('user123');
 
   useEffect(() => {
     fetchUserData();
@@ -79,6 +71,7 @@ const Dashboard = () => {
         setBinsData(bins);
       }
     } catch (error) {
+      console.error('Error fetching bins data:', error);
       setError('Error fetching bins data');
     }
   };
@@ -91,6 +84,7 @@ const Dashboard = () => {
         setCollectionData(collections);
       }
     } catch (error) {
+      console.error('Error fetching collection data:', error);
       setError('Error fetching collection data');
     }
   };
@@ -103,6 +97,7 @@ const Dashboard = () => {
         setRoutesData(routes);
       }
     } catch (error) {
+      console.error('Error fetching routes data:', error);
       setError('Error fetching routes data');
     }
   };
@@ -110,7 +105,7 @@ const Dashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('userData');
-    navigate('/'); // Use React Router's navigate to avoid full page reload
+    navigate('/');
   };
 
   const renderContent = () => {
@@ -130,16 +125,40 @@ const Dashboard = () => {
         return (
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow p-6">
-              <h1 className="text-2xl font-bold text-gray-800 mb-2">Welcome back, {displayData.name || 'User'}!</h1>
-              <p className="text-gray-600">Smart Waste Management Dashboard</p>
+              <h1 className="text-2xl font-bold text-gray-800 mb-2">
+                Welcome back, {displayData.name || 'User'}!
+              </h1>
+              <p className="text-gray-600">
+                {displayData.role === 'collector' 
+                  ? 'Waste Collection Staff Dashboard' 
+                  : 'Smart Waste Management Dashboard'
+                }
+              </p>
             </div>
+
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-xl font-semibold mb-4">Your Profile Information</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium text-gray-700">Full Name</label><p className="mt-1 text-lg font-semibold">{displayData.name}</p></div>
-                <div><label className="block text-sm font-medium text-gray-700">Email</label><p className="mt-1 text-lg font-semibold">{displayData.email}</p></div>
-                <div><label className="block text-sm font-medium text-gray-700">Phone</label><p className="mt-1 text-lg font-semibold">{displayData.phone || 'Not provided'}</p></div>
-                <div><label className="block text-sm font-medium text-gray-700">Address</label><p className="mt-1 text-lg font-semibold">{displayData.address || 'Not provided'}</p></div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Full Name</label>
+                  <p className="mt-1 text-lg font-semibold">{displayData.name}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Email</label>
+                  <p className="mt-1 text-lg font-semibold">{displayData.email}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Phone</label>
+                  <p className="mt-1 text-lg font-semibold">{displayData.phone || 'Not provided'}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Role</label>
+                  <p className="mt-1 text-lg font-semibold">{displayData.role || 'USER'}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Address</label>
+                  <p className="mt-1 text-lg font-semibold">{displayData.address || 'Not provided'}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -158,6 +177,11 @@ const Dashboard = () => {
       case 'routes':
         return (
           <ZoneSelection userId={userId} />
+        );
+
+      case 'feedback-issues':
+        return (
+          <FeedbackIssuesComponent userData={userData} />
         );
 
       case 'profile':
@@ -215,7 +239,6 @@ const Dashboard = () => {
             </div>
           </div>
         );
-        
 
       default:
         return (
@@ -260,7 +283,10 @@ const Dashboard = () => {
                 { id: 'bins', label: 'Waste Bins', icon: FaRecycle },
                 { id: 'collection', label: 'Record Collection', icon: FaHistory },
                 { id: 'routes', label: 'Routes', icon: FaCalendarAlt },
-                { id: 'profile', label: 'Profile', icon: FaUser } // Added Profile tab
+                ...(userData?.role === 'collector' ? [
+                  { id: 'feedback-issues', label: 'Feedback & Issues', icon: FaExclamationTriangle }
+                ] : []),
+                { id: 'profile', label: 'Profile', icon: FaUser }
               ].map((item) => {
                 const IconComponent = item.icon;
                 return (

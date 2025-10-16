@@ -57,6 +57,7 @@ const Dashboard = () => {
   const [useGPSLocation, setUseGPSLocation] = useState(false);
   const [submittedIssues, setSubmittedIssues] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // Payment history state
   const [paymentHistory, setPaymentHistory] = useState([]);
@@ -147,6 +148,75 @@ const Dashboard = () => {
     return statusMap[status] || statusMap.pending;
   };
 
+  // Fetch submitted issues from backend
+  const fetchSubmittedIssues = async () => {
+    setHistoryLoading(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      const userData = JSON.parse(localStorage.getItem('userData'));
+      
+      if (!userData?.id) {
+        console.log('No user ID found');
+        return;
+      }
+
+      console.log('Fetching issues for user:', userData.id);
+
+      const response = await fetch(`http://localhost:8080/api/issues/user/${userData.id}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('Issues response status:', response.status);
+
+      if (response.ok) {
+        const issues = await response.json();
+        console.log('Fetched issues:', issues);
+        
+        // Transform the backend data to match your frontend structure
+        const formattedIssues = issues.map(issue => ({
+          id: issue.id || issue._id,
+          category: issue.category,
+          description: issue.description,
+          location: issue.location,
+          isAnonymous: issue.isAnonymous || false,
+          photos: issue.photoUrls ? issue.photoUrls.map(url => ({ 
+            id: Date.now() + Math.random(),
+            preview: url 
+          })) : [],
+          timestamp: issue.createdAt || issue.timestamp,
+          status: issue.status || 'pending'
+        }));
+        
+        setSubmittedIssues(formattedIssues);
+      } else {
+        console.error('Failed to fetch issues:', response.status);
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+      }
+    } catch (error) {
+      console.error('Error fetching submitted issues:', error);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // Fetch issues when component loads or when switching to history tab
+  useEffect(() => {
+    if (activeTab === 'feedback') {
+      fetchSubmittedIssues();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (feedbackTab === 'history') {
+      fetchSubmittedIssues();
+    }
+  }, [feedbackTab]);
+
   // Feedback & Issue functions
   const handlePhotoUpload = (event) => {
     const files = Array.from(event.target.files);
@@ -233,19 +303,9 @@ const Dashboard = () => {
       if (response.ok) {
         const result = await response.json();
         
-        // Create local issue object for display
-        const newIssue = {
-          id: result.id || Date.now().toString(),
-          category: issueCategory,
-          description: issueDescription,
-          location: issueLocation,
-          isAnonymous: isAnonymous,
-          photos: [...issuePhotos],
-          timestamp: new Date().toISOString(),
-          status: 'pending'
-        };
-
-        setSubmittedIssues(prev => [newIssue, ...prev]);
+        // Refresh the issues list to include the new one
+        await fetchSubmittedIssues();
+        
         resetForm();
         alert('Issue reported successfully! You will receive updates on the status.');
       } else {
@@ -1053,7 +1113,10 @@ const Dashboard = () => {
                     Report Issue
                   </button>
                   <button
-                    onClick={() => setFeedbackTab('history')}
+                    onClick={() => {
+                      setFeedbackTab('history');
+                      fetchSubmittedIssues();
+                    }}
                     className={`flex-1 py-4 px-6 text-center font-semibold transition-colors ${
                       feedbackTab === 'history'
                         ? 'text-emerald-600 border-b-2 border-emerald-600'
@@ -1229,7 +1292,12 @@ const Dashboard = () => {
                   ) : (
                     /* Report History */
                     <div className="space-y-4">
-                      {submittedIssues.length === 0 ? (
+                      {historyLoading ? (
+                        <div className="text-center py-12">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto"></div>
+                          <p className="text-gray-500 mt-2">Loading reports...</p>
+                        </div>
+                      ) : submittedIssues.length === 0 ? (
                         <div className="text-center py-12">
                           <FaFileAlt className="text-4xl text-gray-400 mb-3 mx-auto" />
                           <p className="text-gray-500 text-lg">No reports submitted yet</p>
