@@ -1,6 +1,5 @@
 package com.example.demo.controller;
 
-
 import com.example.demo.model.CollectionRecord;
 import com.example.demo.service.CollectionRecordService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,11 +24,6 @@ public class CollectionRecordController {
         return collectionRecordService.getAllRecords();
     }
 
-    @GetMapping("/collector/{collectorId}")
-    public List<CollectionRecord> getRecordsByCollectorId(@PathVariable String collectorId) {
-        return collectionRecordService.getRecordsByCollectorId(collectorId);
-    }
-
     @GetMapping("/bin/{binId}")
     public List<CollectionRecord> getRecordsByBinId(@PathVariable String binId) {
         return collectionRecordService.getRecordsByBinId(binId);
@@ -39,4 +33,17 @@ public class CollectionRecordController {
     public Optional<CollectionRecord> getRecordById(@PathVariable String id) {
         return collectionRecordService.getRecordById(id);
     }
+
+    @DeleteMapping("/{id}")
+    public String deleteRecord(@PathVariable String id) {
+        boolean deleted = collectionRecordService.deleteRecordById(id);
+        if (deleted) {
+            return "Record deleted successfully.";
+        } else {
+            return "Record with ID not found.";
+        }
+    }
 }
+
+
+// Gajan

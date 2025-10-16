@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ZoneSelection from './ZoneSelectionPage';
 import NearbyBinsComponent from './NearbyBinsComponent';
+import CollectionRecords from './CollectionRecords';
 import { 
   FaWallet, 
   FaMoneyBillWave, 
@@ -151,25 +152,7 @@ const Dashboard = () => {
 
       case 'collection':
         return (
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold mb-4">Record Collection</h2>
-              <div className="space-y-4">
-                {collectionData.length === 0 ? (
-                  <div className="text-center py-8"><p className="text-gray-500">No collection records available.</p></div>
-                ) : (
-                  collectionData.map((record) => (
-                    <div key={record.id} className="bg-gray-50 border border-gray-200 p-4 rounded-lg">
-                      <h3 className="text-lg font-semibold">{record.date}</h3>
-                      <p className="text-gray-600">Collected by: {record.collector}</p>
-                      <p className="text-sm text-gray-500">Waste Type: {record.wasteType}</p>
-                      <p className="text-sm text-gray-500">Amount: {record.amount}kg</p>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div> 
+          <CollectionRecords collectionData={collectionData} userId={userId} />
         );
         
       case 'routes':
