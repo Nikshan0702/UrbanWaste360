@@ -29,7 +29,7 @@ import DashboardPage from '../track-monitor/pages/DashboardPage';
 import WasteHistoryPage from '../track-monitor/pages/WasteHistoryPage';
 import RecyclingCredits from '../track-monitor/pages/RecyclingCredits';
 import Wallet from '../payment/Wallet';
-import WalletPayments from '../payment/alletPayments';
+import WalletPayments from '../payment/WalletPayments';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
