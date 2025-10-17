@@ -15,7 +15,10 @@ import {
   FaUpload,
   FaCalendarDay,
   FaArrowLeft,
-  FaArrowRight
+  FaArrowRight,
+  FaUserCheck,
+  FaTruck,
+  FaBoxOpen
 } from 'react-icons/fa';
 
 const SpecialPickupComponent = ({ userData }) => {
@@ -98,61 +101,62 @@ const SpecialPickupComponent = ({ userData }) => {
     '15:00', '15:30', '16:00', '16:30', '17:00'
   ];
 
+  // Status flow with descriptions
+  const statusFlow = [
+    { 
+      status: 'pending', 
+      icon: FaClock, 
+      color: 'bg-yellow-100 text-yellow-800',
+      description: 'Waiting for admin approval',
+      message: 'Your pickup request is pending approval from admin.'
+    },
+    { 
+      status: 'approved', 
+      icon: FaUserCheck, 
+      color: 'bg-blue-100 text-blue-800',
+      description: 'Approved by admin',
+      message: 'Your pickup has been approved and will be assigned to a collector soon.'
+    },
+    { 
+      status: 'rejected', 
+      icon: FaTimesCircle, 
+      color: 'bg-red-100 text-red-800',
+      description: 'Rejected by admin',
+      message: 'Your pickup request has been rejected.'
+    },
+    { 
+      status: 'assigned', 
+      icon: FaTruck, 
+      color: 'bg-purple-100 text-purple-800',
+      description: 'Assigned to collector',
+      message: 'A collector has been assigned to your pickup.'
+    },
+    { 
+      status: 'in_progress', 
+      icon: FaTruck, 
+      color: 'bg-orange-100 text-orange-800',
+      description: 'Collection in progress',
+      message: 'Collector is on the way to pickup your items.'
+    },
+    { 
+      status: 'completed', 
+      icon: FaCheckCircle, 
+      color: 'bg-green-100 text-green-800',
+      description: 'Successfully collected',
+      message: 'Your items have been successfully collected.'
+    },
+    { 
+      status: 'cancelled', 
+      icon: FaTimesCircle, 
+      color: 'bg-gray-100 text-gray-800',
+      description: 'Cancelled',
+      message: 'This pickup has been cancelled.'
+    }
+  ];
+
   useEffect(() => {
-    if (userData?.role === 'collector') {
-      fetchAllIssues();
-      fetchIssueStatistics();
-    }
-    fetchAvailableSlots();
     fetchScheduledPickups();
-  }, [userData]);
-
-  const fetchAvailableSlots = async () => {
-    try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('http://localhost:8080/api/pickups/available-slots', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const slots = await response.json();
-        setAvailableSlots(slots);
-      } else {
-        // Generate mock slots if API fails
-        generateMockSlots();
-      }
-    } catch (error) {
-      console.error('Error fetching slots:', error);
-      generateMockSlots();
-    }
-  };
-
-  const generateMockSlots = () => {
-    const slots = [];
-    const today = new Date();
-    
-    for (let i = 1; i <= 14; i++) { // Show 2 weeks
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      
-      // Skip weekends (Saturday = 6, Sunday = 0)
-      if (date.getDay() !== 0 && date.getDay() !== 6) {
-        // Randomly make some time slots unavailable for realism
-        const availableTimes = timeSlots.filter(() => Math.random() > 0.3);
-        if (availableTimes.length > 0) {
-          slots.push({
-            date: date.toISOString().split('T')[0],
-            times: availableTimes
-          });
-        }
-      }
-    }
-    
-    setAvailableSlots(slots);
-  };
+  }, []);
 
   const fetchScheduledPickups = async () => {
     try {
@@ -184,11 +188,6 @@ const SpecialPickupComponent = ({ userData }) => {
     return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
   };
 
-  const isDateAvailable = (date) => {
-    const dateString = date.toISOString().split('T')[0];
-    return availableSlots.some(slot => slot.date === dateString);
-  };
-
   const isDateInPast = (date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -201,7 +200,7 @@ const SpecialPickupComponent = ({ userData }) => {
   };
 
   const handleDateSelect = (date) => {
-    if (isDateInPast(date) || isWeekend(date) || !isDateAvailable(date)) return;
+    if (isDateInPast(date) || isWeekend(date)) return;
 
     const dateString = date.toISOString().split('T')[0];
     setFormData(prev => ({
@@ -231,7 +230,6 @@ const SpecialPickupComponent = ({ userData }) => {
     const daysInMonth = getDaysInMonth(currentMonth);
     const firstDay = getFirstDayOfMonth(currentMonth);
     const today = new Date();
-    const currentDate = new Date();
 
     const days = [];
     
@@ -246,7 +244,6 @@ const SpecialPickupComponent = ({ userData }) => {
       const dateString = date.toISOString().split('T')[0];
       const isPast = isDateInPast(date);
       const isWeekendDay = isWeekend(date);
-      const isAvailable = isDateAvailable(date);
       const isSelected = formData.pickupDate === dateString;
       const isToday = date.toDateString() === today.toDateString();
 
@@ -256,7 +253,7 @@ const SpecialPickupComponent = ({ userData }) => {
         className += "bg-emerald-500 text-white border-emerald-600 shadow-lg transform scale-105";
       } else if (isToday) {
         className += "bg-blue-100 text-blue-800 border-blue-300 font-semibold";
-      } else if (isPast || isWeekendDay || !isAvailable) {
+      } else if (isPast || isWeekendDay) {
         className += "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed";
       } else {
         className += "bg-white text-gray-700 border-gray-300 hover:bg-emerald-50 hover:border-emerald-300 hover:shadow-md";
@@ -266,17 +263,16 @@ const SpecialPickupComponent = ({ userData }) => {
         <div
           key={day}
           className={className}
-          onClick={() => handleDateSelect(date)}
+          onClick={() => !isPast && !isWeekendDay && handleDateSelect(date)}
           title={
             isPast ? "Past date" :
             isWeekendDay ? "Weekend - No service" :
-            !isAvailable ? "No available slots" :
             "Click to select"
           }
         >
           <div className="text-center">
             <div className="text-sm font-medium">{day}</div>
-            {isAvailable && !isPast && !isWeekendDay && (
+            {!isPast && !isWeekendDay && (
               <div className="text-xs text-emerald-600 mt-1">Available</div>
             )}
           </div>
@@ -290,8 +286,8 @@ const SpecialPickupComponent = ({ userData }) => {
   const getAvailableTimesForSelectedDate = () => {
     if (!formData.pickupDate) return [];
     
-    const slot = availableSlots.find(s => s.date === formData.pickupDate);
-    return slot ? slot.times : [];
+    // Return all time slots for any selected future date
+    return timeSlots;
   };
 
   const handleInputChange = (field, value) => {
@@ -403,7 +399,7 @@ const SpecialPickupComponent = ({ userData }) => {
         location: formData.location || userData.address,
         specialInstructions: formData.specialInstructions,
         urgency: formData.urgency,
-        status: 'scheduled',
+        status: 'pending', // Changed from 'scheduled' to 'pending'
         price: calculatePrice()
       };
 
@@ -418,7 +414,7 @@ const SpecialPickupComponent = ({ userData }) => {
 
       if (response.ok) {
         const result = await response.json();
-        setSuccess(`Special pickup scheduled successfully! Pickup ID: ${result.pickupId}`);
+        setSuccess(`Special pickup requested successfully! Your request is pending approval. Pickup ID: ${result.pickupId}`);
         resetForm();
         await fetchScheduledPickups();
       } else {
@@ -471,14 +467,23 @@ const SpecialPickupComponent = ({ userData }) => {
     }
   };
 
+  const getStatusInfo = (status) => {
+    return statusFlow.find(s => s.status === status) || statusFlow[0];
+  };
+
   const getStatusColor = (status) => {
-    switch (status) {
-      case 'scheduled': return 'bg-blue-100 text-blue-800';
-      case 'in_progress': return 'bg-yellow-100 text-yellow-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+    const statusInfo = getStatusInfo(status);
+    return statusInfo.color;
+  };
+
+  const getStatusIcon = (status) => {
+    const statusInfo = getStatusInfo(status);
+    return statusInfo.icon;
+  };
+
+  const getStatusDescription = (status) => {
+    const statusInfo = getStatusInfo(status);
+    return statusInfo.description;
   };
 
   const formatDate = (dateString) => {
@@ -488,6 +493,11 @@ const SpecialPickupComponent = ({ userData }) => {
       month: 'long',
       day: 'numeric'
     });
+  };
+
+  const canCancelPickup = (status) => {
+    // Users can only cancel pickups that are still in pending or approved state
+    return ['pending', 'approved'].includes(status);
   };
 
   const selectedWasteType = wasteTypes.find(w => w.id === formData.wasteType);
@@ -653,16 +663,10 @@ const SpecialPickupComponent = ({ userData }) => {
                       </button>
                     ))}
                   </div>
-                  {availableTimes.length === 0 && (
-                    <p className="text-red-600 text-sm mt-2">
-                      No available time slots for this date. Please select another date.
-                    </p>
-                  )}
                 </div>
               )}
             </div>
 
-            {/* Rest of the form components remain the same */}
             {/* Description & Location */}
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Pickup Details</h2>
@@ -839,58 +843,92 @@ const SpecialPickupComponent = ({ userData }) => {
                   {loading ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Scheduling...</span>
+                      <span>Submitting...</span>
                     </>
                   ) : (
                     <>
                       <FaCalendarAlt className="w-4 h-4" />
-                      <span>Schedule Pickup - LKR {calculatePrice()}</span>
+                      <span>Request Pickup - LKR {calculatePrice()}</span>
                     </>
                   )}
                 </button>
               </div>
             </div>
 
+            {/* Status Flow Info */}
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Pickup Status Flow</h2>
+              <div className="space-y-3">
+                {statusFlow.map((status, index) => (
+                  <div key={status.status} className="flex items-center space-x-3">
+                    <div className={`p-2 rounded-full ${status.color}`}>
+                      <status.icon className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900 capitalize">{status.status}</p>
+                      <p className="text-xs text-gray-500">{status.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* Scheduled Pickups */}
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Your Scheduled Pickups</h2>
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Your Pickup Requests</h2>
               
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {scheduledPickups.length === 0 ? (
                   <div className="text-center py-4">
                     <FaCalendarAlt className="text-gray-400 text-2xl mx-auto mb-2" />
-                    <p className="text-gray-500 text-sm">No scheduled pickups</p>
+                    <p className="text-gray-500 text-sm">No pickup requests</p>
                   </div>
                 ) : (
-                  scheduledPickups.map((pickup) => (
-                    <div key={pickup.id} className="border border-gray-200 rounded-lg p-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-semibold text-gray-900">
-                          {wasteTypes.find(w => w.id === pickup.wasteType)?.name}
-                        </span>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(pickup.status)}`}>
-                          {pickup.status}
-                        </span>
-                      </div>
-                      <div className="text-sm text-gray-600 space-y-1">
-                        <div className="flex items-center gap-1">
-                          <FaCalendarAlt className="w-3 h-3" />
-                          {formatDate(pickup.pickupDate)} at {pickup.pickupTime}
+                  scheduledPickups.map((pickup) => {
+                    const StatusIcon = getStatusIcon(pickup.status);
+                    const statusDescription = getStatusDescription(pickup.status);
+                    
+                    return (
+                      <div key={pickup.id} className="border border-gray-200 rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-semibold text-gray-900">
+                            {wasteTypes.find(w => w.id === pickup.wasteType)?.name}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <StatusIcon className="w-3 h-3" />
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(pickup.status)}`}>
+                              {pickup.status}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span>LKR {pickup.price}</span>
-                          {pickup.status === 'scheduled' && (
-                            <button
-                              onClick={() => cancelPickup(pickup.id)}
-                              className="text-red-600 hover:text-red-800 text-xs font-medium"
-                            >
-                              Cancel
-                            </button>
+                        <div className="text-sm text-gray-600 space-y-1">
+                          <div className="flex items-center gap-1">
+                            <FaCalendarAlt className="w-3 h-3" />
+                            {formatDate(pickup.pickupDate)} at {pickup.pickupTime}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {statusDescription}
+                          </div>
+                          {pickup.rejectionReason && (
+                            <div className="text-xs text-red-500 bg-red-50 p-2 rounded">
+                              <strong>Rejection Reason:</strong> {pickup.rejectionReason}
+                            </div>
                           )}
+                          <div className="flex items-center justify-between">
+                            <span>LKR {pickup.price}</span>
+                            {canCancelPickup(pickup.status) && (
+                              <button
+                                onClick={() => cancelPickup(pickup.id)}
+                                className="text-red-600 hover:text-red-800 text-xs font-medium"
+                              >
+                                Cancel
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>

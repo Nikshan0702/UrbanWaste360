@@ -4,13 +4,15 @@ import {
   FaUsers, FaUser, FaSearch, FaWallet, FaHistory, FaRecycle, FaClock,
   FaCheckCircle, FaTimesCircle, FaCalendarAlt, FaChartBar, FaChartPie,
   FaChartLine, FaEnvelope, FaPhone, FaMapMarkerAlt, FaCheck, FaTimes,
-  FaSignOutAlt
+  FaSignOutAlt, FaTrash, FaExclamationTriangle, FaLaptop, FaBatteryFull
 } from 'react-icons/fa';
 
 import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 } from 'recharts';
+
+import AdminSpecialPickupComponent from '../admin/AdminSpecialPickup';
 
 const API = 'http://localhost:8080';
 const isDevToken = (t) => !t || t === 'demo-token' || t === 'null' || t === 'undefined';
@@ -31,7 +33,7 @@ async function authFetch(path, { method = 'GET', body, headers = {}, json = true
   return res;
 }
 
-/* ------------ UI helpers (must exist) ------------ */
+/* ------------ UI helpers ------------ */
 const SectionCard = ({ title, icon, right, children }) => (
   <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
     <div className="flex items-center justify-between mb-5">
@@ -81,7 +83,7 @@ const Pill = ({ children, tone = 'yellow' }) => {
 /* ------------------------------------------------ */
 
 const AdminDashboard = () => {
-  const [tab, setTab] = useState('analytics'); // default to analytics
+  const [tab, setTab] = useState('analytics');
   const [admin, setAdmin] = useState(null);
   const [users, setUsers] = useState([]);
   const [uQuery, setUQuery] = useState('');
@@ -104,9 +106,21 @@ const AdminDashboard = () => {
   const [analytics, setAnalytics] = useState(null);
   const [busy, setBusy] = useState(false);
 
+  // Special Pickup Statistics
+  const [specialPickupStats, setSpecialPickupStats] = useState({
+    total: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+    assigned: 0,
+    in_progress: 0,
+    completed: 0,
+    cancelled: 0
+  });
+
   const logout = () => { localStorage.clear(); window.location.href = '/'; };
 
-  /* --- Admin profile (fallback chain) --- */
+  /* --- Admin profile --- */
   useEffect(() => {
     (async () => {
       try {
@@ -117,7 +131,7 @@ const AdminDashboard = () => {
     })();
   }, []);
 
-  /* --- Users (ADMIN required when security enabled) --- */
+  /* --- Users --- */
   useEffect(() => {
     (async () => {
       try {
@@ -127,7 +141,7 @@ const AdminDashboard = () => {
           setUsers(list || []);
           if (list?.length) setSelectedUser(list[0]);
         } else {
-          setUsers([]); // keep UI alive
+          setUsers([]);
         }
       } catch { setUsers([]); }
     })();
@@ -162,7 +176,7 @@ const AdminDashboard = () => {
   };
   useEffect(() => { loadRequests(); }, []);
 
-  /* --- Admin waste records (selected user) --- */
+  /* --- Admin waste records --- */
   const loadWasteRecords = async (user) => {
     if (!user?.id) return;
     try {
@@ -189,6 +203,32 @@ const AdminDashboard = () => {
   };
   useEffect(() => { loadUpcoming(); }, []);
 
+  /* --- Special Pickup Statistics --- */
+  const loadSpecialPickupStats = async () => {
+    try {
+      const res = await authFetch('/api/pickups/statistics');
+      if (res.ok) {
+        const stats = await res.json();
+        setSpecialPickupStats({
+          total: stats.totalPickups || 0,
+          pending: stats.pendingPickups || 0,
+          approved: stats.approvedPickups || 0,
+          rejected: stats.rejectedPickups || 0,
+          assigned: stats.assignedPickups || 0,
+          in_progress: stats.inProgressPickups || 0,
+          completed: stats.completedPickups || 0,
+          cancelled: stats.cancelledPickups || 0
+        });
+      }
+    } catch (error) {
+      console.error('Error loading special pickup stats:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadSpecialPickupStats();
+  }, []);
+
   const assignSchedule = async () => {
     if (!scheduleForm.residentId || !scheduleForm.date || !scheduleForm.time) return alert('Resident, date & time required');
     try {
@@ -211,6 +251,7 @@ const AdminDashboard = () => {
       completionRate: totalRequests ? Math.round((collected.length / totalRequests) * 100) : 0
     };
   };
+
   const loadAnalytics = async () => {
     setBusy(true);
     try {
@@ -227,7 +268,7 @@ const AdminDashboard = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [users.length, pending.length, collected.length, rejected.length]);
 
-  /* --- Derived chart data (selected user) --- */
+  /* --- Derived chart data --- */
   const wasteByType = useMemo(() => {
     const m = {};
     (wasteRecords || []).forEach(r => { m[r.type || 'Other'] = (m[r.type || 'Other'] || 0) + Number(r.quantity || 0); });
@@ -643,6 +684,31 @@ const AdminDashboard = () => {
     </div>
   );
 
+  const SpecialPickupsTab = (
+    <div className="space-y-6">
+      {/* Special Pickup Statistics */}
+      <SectionCard title="Special Pickup Overview" icon={<FaTrash />} right={
+        <button onClick={loadSpecialPickupStats} className="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm">
+          Refresh Stats
+        </button>
+      }>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <KPI label="Total Pickups" value={specialPickupStats.total} />
+          <KPI label="Pending" value={specialPickupStats.pending} tone="yellow" />
+          <KPI label="Approved" value={specialPickupStats.approved} tone="blue" />
+          <KPI label="Rejected" value={specialPickupStats.rejected} tone="red" />
+          <KPI label="Assigned" value={specialPickupStats.assigned} tone="purple" />
+          <KPI label="In Progress" value={specialPickupStats.in_progress} tone="orange" />
+          <KPI label="Completed" value={specialPickupStats.completed} tone="emerald" />
+          <KPI label="Cancelled" value={specialPickupStats.cancelled} tone="gray" />
+        </div>
+      </SectionCard>
+
+      {/* Special Pickup Management Component */}
+      <AdminSpecialPickupComponent />
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -685,6 +751,7 @@ const AdminDashboard = () => {
                 { id: 'users', label: 'Users', icon: FaUsers },
                 { id: 'requests', label: 'Sell Requests', icon: FaRecycle },
                 { id: 'schedule', label: 'Scheduling', icon: FaCalendarAlt },
+                { id: 'special-pickups', label: 'Special Pickups', icon: FaTrash },
                 { id: 'profile', label: 'Admin Profile', icon: FaUser },
               ].map(item => {
                 const Icon = item.icon;
@@ -712,6 +779,7 @@ const AdminDashboard = () => {
             {tab === 'users' && UsersTab}
             {tab === 'requests' && RequestsTab}
             {tab === 'schedule' && ScheduleTab}
+            {tab === 'special-pickups' && SpecialPickupsTab}
             {tab === 'profile' && (
               <SectionCard title="Admin Profile" icon={<FaUser />}>
                 {admin ? (
