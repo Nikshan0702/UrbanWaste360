@@ -405,7 +405,7 @@ const AdminDashboard = () => {
 
       {/* User details + KPIs */}
       <div className="lg:col-span-2 space-y-6">
-        <SectionCard
+        {/* <SectionCard
           title="User Profile"
           icon={<FaUser />}
           right={
@@ -426,10 +426,10 @@ const AdminDashboard = () => {
               <div><div className="text-sm text-gray-600 mb-1">User ID</div><div className="font-semibold">{selectedUser.id || '—'}</div></div>
             </div>
           ) : <div className="text-sm text-gray-500">Select a user from the list.</div>}
-        </SectionCard>
+        </SectionCard> */}
 
         {/* Per-user charts */}
-        <SectionCard title="User Waste by Type (kg)" icon={<FaChartBar />}>
+        {/* <SectionCard title="User Waste by Type (kg)" icon={<FaChartBar />}>
           <div className="h-72">
             {wasteByType.length === 0 ? <div className="text-sm text-gray-500">No data.</div> : (
               <ResponsiveContainer width="100%" height="100%">
@@ -444,9 +444,9 @@ const AdminDashboard = () => {
               </ResponsiveContainer>
             )}
           </div>
-        </SectionCard>
+        </SectionCard> */}
 
-        <SectionCard title="User Waste by Month (kg)" icon={<FaChartLine />}>
+        {/* <SectionCard title="User Waste by Month (kg)" icon={<FaChartLine />}>
           <div className="h-72">
             {wasteByMonth.length === 0 ? <div className="text-sm text-gray-500">No data.</div> : (
               <ResponsiveContainer width="100%" height="100%">
@@ -461,9 +461,9 @@ const AdminDashboard = () => {
               </ResponsiveContainer>
             )}
           </div>
-        </SectionCard>
+        </SectionCard> */}
 
-        <SectionCard title="Payment History" icon={<FaHistory />} right={
+        {/* <SectionCard title="Payment History" icon={<FaHistory />} right={
           <button onClick={async () => {
             const res = await authFetch(`/api/payments/history/${selectedUser?.id}`);
             if (res.ok) setHistory(await res.json());
@@ -495,7 +495,7 @@ const AdminDashboard = () => {
               );
             })}
           </div>
-        </SectionCard>
+        </SectionCard> */}
       </div>
     </div>
   );
