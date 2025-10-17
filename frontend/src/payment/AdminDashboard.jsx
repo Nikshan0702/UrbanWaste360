@@ -653,10 +653,39 @@ const AdminDashboard = () => {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
                   <YAxis />
-                  <Tooltip />
+                  <Tooltip formatter={(value) => [`${value} kg`, 'Weight']} />
                   <Legend />
-                  <Bar dataKey="kg" name="Kilograms" />
+                  <Bar dataKey="kg" name="Kilograms" fill="#10b981" />
                 </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Waste Collection Trends (Monthly)" icon={<FaChartLine />} right={
+          <button onClick={async () => {
+            try {
+              const res = await authFetch('/api/admin/records/waste/aggregate/by-month');
+              if (res.ok) {
+                const data = await res.json();
+                setWasteByMonth(data);
+              }
+            } catch {}
+          }} className="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm">Refresh</button>
+        }>
+          <div className="h-80">
+            {wasteByMonth.length === 0 ? (
+              <div className="text-sm text-gray-500">No data.</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={wasteByMonth} margin={{ top:10, right:10, left:0, bottom:0 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip formatter={(value) => [`${value} kg`, 'Weight']} />
+                  <Legend />
+                  <Line type="monotone" dataKey="kg" name="Kilograms" stroke="#10b981" strokeWidth={3} />
+                </LineChart>
               </ResponsiveContainer>
             )}
           </div>
@@ -664,6 +693,34 @@ const AdminDashboard = () => {
       </div>
 
       <div className="space-y-6">
+        <SectionCard title="Performance Metrics" icon={<FaChartPie />}>
+          <div className="space-y-4">
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-4 rounded-xl">
+              <div className="text-sm text-gray-600 mb-1">Efficiency Score</div>
+              <div className="text-2xl font-bold text-emerald-700">
+                {analytics?.completionRate ? `${analytics.completionRate}%` : '0%'}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">Collection completion rate</div>
+            </div>
+            
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl">
+              <div className="text-sm text-gray-600 mb-1">Total Waste Processed</div>
+              <div className="text-2xl font-bold text-blue-700">
+                {analytics?.collectedKg ? `${analytics.collectedKg} kg` : '0 kg'}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">All time collected</div>
+            </div>
+
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-xl">
+              <div className="text-sm text-gray-600 mb-1">Active Users</div>
+              <div className="text-2xl font-bold text-purple-700">
+                {users.length}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">Registered users</div>
+            </div>
+          </div>
+        </SectionCard>
+
         <SectionCard title="Recent Collected" icon={<FaChartLine />}>
           <div className="space-y-2 max-h-[380px] overflow-y-auto">
             {collected.slice(0, 12).map(r => (
@@ -678,6 +735,29 @@ const AdminDashboard = () => {
               </div>
             ))}
             {collected.length === 0 && <div className="text-sm text-gray-500">No collected records.</div>}
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Quick Actions" icon={<FaRecycle />}>
+          <div className="space-y-3">
+            <button 
+              onClick={loadRequests}
+              className="w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              Refresh All Data
+            </button>
+            <button 
+              onClick={loadAnalytics}
+              className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              Update Analytics
+            </button>
+            <button 
+              onClick={loadGlobalByType}
+              className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              Load Waste Data
+            </button>
           </div>
         </SectionCard>
       </div>

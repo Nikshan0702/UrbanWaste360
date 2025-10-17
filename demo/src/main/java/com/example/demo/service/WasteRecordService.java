@@ -18,6 +18,10 @@ public class WasteRecordService {
     // }
 
     public List<WasteRecord> list(String residentId, String type) {
+        if (residentId == null || residentId.isBlank()) {
+            // Return all records for admin
+            return repo.findAll();
+        }
         if (type != null && !type.isBlank()) return repo.findByResidentIdAndType(residentId, type);
         return repo.findByResidentId(residentId);
     }

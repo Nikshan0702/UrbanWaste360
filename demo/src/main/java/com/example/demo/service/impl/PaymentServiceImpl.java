@@ -15,16 +15,26 @@ import com.example.demo.model.Payment;
 import com.example.demo.model.PaymentMethod;
 import com.example.demo.model.PaymentStatus;
 import com.example.demo.ports.PaymentService;
-import com.example.demo.ports.WalletService;
+import com.example.demo.ports.WalletService; 
 
 @Service
 public class PaymentServiceImpl implements PaymentService {
 
     private final WalletService wallet;
 
+
+
     // simple in-memory demo stores
     private final Map<String, Double> outstanding = new ConcurrentHashMap<>();
     private final Map<String, List<Payment>> history = new ConcurrentHashMap<>();
+
+
+
+
+
+
+
+    
 
     public PaymentServiceImpl(WalletService wallet) {
         this.wallet = wallet;

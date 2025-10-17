@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 import com.example.demo.ports.WalletService;
 
 @Service
-@Primary // ensure this is picked if another WalletService appears later
+// @Primary // ensure this is picked if another WalletService appears later
 public class WalletServiceInMemory implements WalletService {
 
     private final Map<String, Double> balances = new ConcurrentHashMap<>();

@@ -1,0 +1,9 @@
+app:
+  security:
+    enabled: true
+  cors:
+    allow-credentials: true
+    allowed-origin-patterns: "*"
+spring:
+  mvc:
+    log-resolved-exception: true

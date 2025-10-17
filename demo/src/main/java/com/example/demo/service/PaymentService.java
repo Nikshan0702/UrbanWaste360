@@ -8,6 +8,7 @@ import com.example.demo.dto.PaymentResponse;
 import com.example.demo.dto.WalletResponse;
 
 public interface PaymentService {
+    void processPayment(String userId, double amount);
     PaymentResponse processPayment(PaymentRequest request);
     WalletResponse getWalletBalance(String userId);
     List<PaymentHistoryResponse> getPaymentHistory(String userId);

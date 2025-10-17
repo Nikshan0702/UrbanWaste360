@@ -35,19 +35,34 @@ const Wallet = () => {
   const [sellRequests, setSellRequests] = useState([]);
   const [wasteType, setWasteType] = useState('');
   const [wasteAmount, setWasteAmount] = useState('');
-  const [userId] = useState('user123'); // replace with auth context in prod
+  const [userId, setUserId] = useState('');
   const [loading, setLoading] = useState(false);
   const [outstanding, setOutstanding] = useState(0);
   const [cardToken, setCardToken] = useState('');
 
+
+  // const [userId, setUserId] = useState('');
+
+useEffect(() => {
+  const stored = localStorage.getItem('userData');
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      if (parsed?.id) setUserId(parsed.id);
+    } catch {}
+  }
+}, []);
+
   useEffect(() => {
+    if (!userId) return;
     fetchWalletBalance();
     fetchAvailableWaste();
     fetchOutstanding();
     fetchMySellRequests();
-  }, []);
+  }, [userId]);
 
   const fetchWalletBalance = async () => {
+    if (!userId) return;
     try {
       // either shape works; this calls /api/payments/wallet?residentId=...
       const res = await authFetch(`/api/payments/wallet`, { userId }, userId);
@@ -65,6 +80,7 @@ const Wallet = () => {
   };
   
   const fetchOutstanding = async () => {
+    if (!userId) return;
     try {
       const res = await authFetch(`/api/payments/outstanding`, { userId }, userId);
       if (res.ok) {
@@ -77,6 +93,7 @@ const Wallet = () => {
   };
   
   const fetchMySellRequests = async () => {
+    if (!userId) return;
     try {
       const res = await authFetch(`/api/trade/sell-requests`, { userId }, userId);
       if (res.ok) setSellRequests(await res.json());
@@ -86,6 +103,7 @@ const Wallet = () => {
   };
 
   const fetchAvailableWaste = async () => {
+    if (!userId) return;
     try {
       const res = await authFetch(`/api/trade/available`, { userId });
       if (res.ok) {
