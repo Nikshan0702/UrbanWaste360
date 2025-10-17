@@ -112,3 +112,7 @@ GET /api/payments/history/{userId}
 - Created `PaymentFlowTest` to verify the complete flow
 - Tests waste selling, wallet balance checking, and payment processing
 - Verifies wallet balance updates correctly after transactions
+
+##
+Gajan18#
+
