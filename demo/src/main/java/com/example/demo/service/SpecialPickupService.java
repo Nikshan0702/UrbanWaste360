@@ -18,4 +18,5 @@ public interface SpecialPickupService {
     PickupStatisticsResponse getPickupStatistics();
     List<SpecialPickupResponse> getCrewAssignedPickups(String crewId);
     SpecialPickupResponse assignToCrew(String pickupId, String crewId);
+    SpecialPickupResponse approveAndAssign(String pickupId, ApproveAssignRequest req, String approverId);
 }

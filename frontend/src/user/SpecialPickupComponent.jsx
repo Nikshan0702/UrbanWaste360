@@ -29,6 +29,9 @@ const SpecialPickupComponent = ({ userData }) => {
   const [scheduledPickups, setScheduledPickups] = useState([]);
   const [showCalendar, setShowCalendar] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [outstanding, setOutstanding] = useState(0);
+  const [cardToken, setCardToken] = useState('');
 
   // Form state
   const [formData, setFormData] = useState({
@@ -156,7 +159,16 @@ const SpecialPickupComponent = ({ userData }) => {
 
   useEffect(() => {
     fetchScheduledPickups();
+    refreshPayments();
   }, []);
+
+  const refreshPayments = async () => {
+    try {
+      await Promise.all([fetchWallet(), fetchOutstanding()]);
+    } catch (e) {
+      // ignore here; individual functions set error if needed
+    }
+  };
 
   const fetchScheduledPickups = async () => {
     try {
@@ -176,6 +188,44 @@ const SpecialPickupComponent = ({ userData }) => {
       }
     } catch (error) {
       console.error('Error fetching scheduled pickups:', error);
+    }
+  };
+
+  const fetchWallet = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const user = JSON.parse(localStorage.getItem('userData'));
+      const res = await fetch(`http://localhost:8080/api/payments/wallet?residentId=${encodeURIComponent(user.id)}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setWalletBalance(Number(data.balance || 0));
+      }
+    } catch (e) {
+      console.error('Error fetching wallet:', e);
+    }
+  };
+
+  const fetchOutstanding = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const user = JSON.parse(localStorage.getItem('userData'));
+      const res = await fetch(`http://localhost:8080/api/payments/outstanding?residentId=${encodeURIComponent(user.id)}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setOutstanding(Number(data.outstanding || 0));
+      }
+    } catch (e) {
+      console.error('Error fetching outstanding:', e);
     }
   };
 
@@ -417,6 +467,7 @@ const SpecialPickupComponent = ({ userData }) => {
         setSuccess(`Special pickup requested successfully! Your request is pending approval. Pickup ID: ${result.pickupId}`);
         resetForm();
         await fetchScheduledPickups();
+        await refreshPayments();
       } else {
         const errorText = await response.text();
         throw new Error(errorText || 'Failed to schedule pickup');
@@ -458,12 +509,72 @@ const SpecialPickupComponent = ({ userData }) => {
       if (response.ok) {
         setSuccess('Pickup cancelled successfully');
         await fetchScheduledPickups();
+        await refreshPayments();
       } else {
         throw new Error('Failed to cancel pickup');
       }
     } catch (error) {
       console.error('Error cancelling pickup:', error);
       setError('Failed to cancel pickup');
+    }
+  };
+
+  const settleWithWallet = async () => {
+    try {
+      setError('');
+      const token = localStorage.getItem('authToken');
+      const user = JSON.parse(localStorage.getItem('userData'));
+      if (outstanding <= 0) return;
+      const body = { method: 'wallet', amount: outstanding };
+      const res = await fetch('http://localhost:8080/api/payments/settle?residentId=' + encodeURIComponent(user.id), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || 'Wallet payment failed');
+      }
+      setSuccess('Payment completed with wallet');
+      await refreshPayments();
+    } catch (e) {
+      console.error('Wallet payment error:', e);
+      setError(e.message || 'Wallet payment failed');
+    }
+  };
+
+  const settleWithCard = async () => {
+    try {
+      setError('');
+      const token = localStorage.getItem('authToken');
+      const user = JSON.parse(localStorage.getItem('userData'));
+      if (outstanding <= 0) return;
+      if (!cardToken || !cardToken.trim()) {
+        setError('Enter card token');
+        return;
+      }
+      const body = { method: 'card', amount: outstanding, cardToken };
+      const res = await fetch('http://localhost:8080/api/payments/settle?residentId=' + encodeURIComponent(user.id), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || 'Card payment failed');
+      }
+      setSuccess('Payment completed with card');
+      setCardToken('');
+      await refreshPayments();
+    } catch (e) {
+      console.error('Card payment error:', e);
+      setError(e.message || 'Card payment failed');
     }
   };
 
@@ -931,6 +1042,55 @@ const SpecialPickupComponent = ({ userData }) => {
                   })
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* Payments */}
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <FaMoneyBillWave className="text-emerald-600" />
+              Payments
+            </h2>
+            <div className="space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Wallet Balance</span>
+                <span className="font-semibold">LKR {walletBalance.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Outstanding</span>
+                <span className="font-semibold text-red-600">LKR {outstanding.toFixed(2)}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={cardToken}
+                  onChange={(e) => setCardToken(e.target.value)}
+                  placeholder="Card token"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                <button
+                  onClick={settleWithWallet}
+                  disabled={outstanding <= 0}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-400 text-white py-2 px-4 rounded-lg font-semibold"
+                >
+                  Pay with Wallet
+                </button>
+                <button
+                  onClick={settleWithCard}
+                  disabled={outstanding <= 0}
+                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white py-2 px-4 rounded-lg font-semibold"
+                >
+                  Pay with Card
+                </button>
+              </div>
+              <button
+                onClick={refreshPayments}
+                className="w-full border border-gray-300 hover:border-emerald-400 text-gray-700 py-2 px-4 rounded-lg font-medium"
+              >
+                Refresh Balances
+              </button>
             </div>
           </div>
         </div>
