@@ -30,7 +30,6 @@ public class SpecialPickupServiceImpl implements SpecialPickupService {
     private final SpecialPickupRepository pickupRepository;
     private final PaymentService paymentService;
 
-    // Single-constructor beans don't need @Autowired
     public SpecialPickupServiceImpl(SpecialPickupRepository pickupRepository, PaymentService paymentService) {
         this.pickupRepository = pickupRepository;
         this.paymentService = paymentService;
@@ -63,19 +62,17 @@ public class SpecialPickupServiceImpl implements SpecialPickupService {
     public List<PickupSlotResponse> getAvailableSlots() {
         List<PickupSlotResponse> slots = new ArrayList<>();
         LocalDate today = LocalDate.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-        // Next 7 days, weekdays only
         for (int i = 1; i <= 7; i++) {
             LocalDate date = today.plusDays(i);
             if (date.getDayOfWeek().getValue() < 6) {
                 List<String> availableTimes = List.of("09:00", "11:00", "14:00", "16:00");
-                List<String> bookedTimes = getBookedTimesForDate(date.format(formatter));
+                List<String> bookedTimes = getBookedTimesForDate(date.format(fmt));
                 List<String> finalTimes = new ArrayList<>(availableTimes);
                 finalTimes.removeAll(bookedTimes);
-
                 if (!finalTimes.isEmpty()) {
-                    slots.add(new PickupSlotResponse(date.format(formatter), finalTimes));
+                    slots.add(new PickupSlotResponse(date.format(fmt), finalTimes));
                 }
             }
         }
@@ -84,11 +81,9 @@ public class SpecialPickupServiceImpl implements SpecialPickupService {
 
     private List<String> getBookedTimesForDate(String date) {
         List<SpecialPickup> pickups = pickupRepository.findByPickupDateAndStatus(date, "SCHEDULED");
-        List<String> bookedTimes = new ArrayList<>();
-        for (SpecialPickup pickup : pickups) {
-            bookedTimes.add(pickup.getPickupTime());
-        }
-        return bookedTimes;
+        List<String> booked = new ArrayList<>();
+        for (SpecialPickup p : pickups) booked.add(p.getPickupTime());
+        return booked;
     }
 
     @Override
@@ -107,29 +102,19 @@ public class SpecialPickupServiceImpl implements SpecialPickupService {
     public SpecialPickupResponse getPickupById(String id) {
         return pickupRepository.findById(id)
                 .map(this::mapToResponse)
-                .orElseThrow(() ->
-                        new ResponseStatusException(HttpStatus.NOT_FOUND, "Pickup not found with id: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pickup not found with id: " + id));
     }
 
-    /**
-     * Update status (NO charge here; charge is added at approval).
-     * Allowed transitions:
-     *  SCHEDULED -> APPROVED | CANCELLED | IN_PROGRESS
-     *  APPROVED  -> IN_PROGRESS | CANCELLED | COMPLETED
-     *  IN_PROGRESS -> COMPLETED | CANCELLED
-     */
     @Override
     public SpecialPickupResponse updatePickupStatus(String id, PickupStatusUpdateRequest request) {
         SpecialPickup pickup = pickupRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResponseStatusException(HttpStatus.NOT_FOUND, "Pickup not found with id: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pickup not found with id: " + id));
 
         String target = normalizeStatus(request.getStatus());
         String current = pickup.getStatus();
 
         if (!isTransitionAllowed(current, target)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Invalid transition: " + current + " -> " + target);
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Invalid transition");
         }
 
         pickup.setStatus(target);
@@ -145,8 +130,7 @@ public class SpecialPickupServiceImpl implements SpecialPickupService {
     @Override
     public SpecialPickupResponse cancelPickup(String id) {
         SpecialPickup pickup = pickupRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResponseStatusException(HttpStatus.NOT_FOUND, "Pickup not found with id: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pickup not found with id: " + id));
         pickup.setStatus("CANCELLED");
         pickup.setUpdatedAt(LocalDateTime.now());
         return mapToResponse(pickupRepository.save(pickup));
@@ -160,64 +144,54 @@ public class SpecialPickupServiceImpl implements SpecialPickupService {
 
     @Override
     public PickupStatisticsResponse getPickupStatistics() {
-        List<SpecialPickup> allPickups = pickupRepository.findAll();
+        List<SpecialPickup> all = pickupRepository.findAll();
 
-        int totalPickups = allPickups.size();
-        int scheduledPickups   = (int) allPickups.stream().filter(p -> "SCHEDULED".equals(p.getStatus())).count();
-        int approvedPickups    = (int) allPickups.stream().filter(p -> "APPROVED".equals(p.getStatus())).count();
-        int inProgressPickups  = (int) allPickups.stream().filter(p -> "IN_PROGRESS".equals(p.getStatus())).count();
-        int completedPickups   = (int) allPickups.stream().filter(p -> "COMPLETED".equals(p.getStatus())).count();
-        int cancelledPickups   = (int) allPickups.stream().filter(p -> "CANCELLED".equals(p.getStatus())).count();
+        int total = all.size();
+        int scheduled = (int) all.stream().filter(p -> "SCHEDULED".equals(p.getStatus())).count();
+        int approved  = (int) all.stream().filter(p -> "APPROVED".equals(p.getStatus())).count();
+        int inProg    = (int) all.stream().filter(p -> "IN_PROGRESS".equals(p.getStatus())).count();
+        int completed = (int) all.stream().filter(p -> "COMPLETED".equals(p.getStatus())).count();
+        int cancelled = (int) all.stream().filter(p -> "CANCELLED".equals(p.getStatus())).count();
 
-        double totalRevenue = allPickups.stream()
+        double totalRevenue = all.stream()
                 .filter(p -> "COMPLETED".equals(p.getStatus()))
-                .mapToDouble(SpecialPickup::getPrice)
-                .sum();
+                .mapToDouble(SpecialPickup::getPrice).sum();
 
-        int pendingPayments = approvedPickups; // approved implies an outstanding exists
-
-        PickupStatisticsResponse st = new PickupStatisticsResponse();
-        st.setTotalPickups(totalPickups);
-        st.setScheduledPickups(scheduledPickups);
-        st.setInProgressPickups(inProgressPickups);
-        st.setCompletedPickups(completedPickups);
-        st.setCancelledPickups(cancelledPickups);
-        st.setTotalRevenue(totalRevenue);
-        st.setPendingPayments(pendingPayments);
-        return st;
+        PickupStatisticsResponse s = new PickupStatisticsResponse();
+        s.setTotalPickups(total);
+        s.setScheduledPickups(scheduled);
+        s.setInProgressPickups(inProg);
+        s.setCompletedPickups(completed);
+        s.setCancelledPickups(cancelled);
+        s.setTotalRevenue(totalRevenue);
+        s.setPendingPayments(approved); // approved => outstanding exists
+        return s;
     }
 
     @Override
     public List<SpecialPickupResponse> getCrewAssignedPickups(String crewId) {
-        List<SpecialPickup> scheduled = pickupRepository
-                .findByAssignedCrewIdAndStatusOrderByCreatedAtDesc(crewId, "SCHEDULED");
-        List<SpecialPickup> approved  = pickupRepository
-                .findByAssignedCrewIdAndStatusOrderByCreatedAtDesc(crewId, "APPROVED");
-        List<SpecialPickup> inProgress = pickupRepository
-                .findByAssignedCrewIdAndStatusOrderByCreatedAtDesc(crewId, "IN_PROGRESS");
+        List<SpecialPickup> a = pickupRepository.findByAssignedCrewIdAndStatusOrderByCreatedAtDesc(crewId, "SCHEDULED");
+        List<SpecialPickup> b = pickupRepository.findByAssignedCrewIdAndStatusOrderByCreatedAtDesc(crewId, "APPROVED");
+        List<SpecialPickup> c = pickupRepository.findByAssignedCrewIdAndStatusOrderByCreatedAtDesc(crewId, "IN_PROGRESS");
+        List<SpecialPickup> d = pickupRepository.findByAssignedCrewIdAndStatusOrderByCreatedAtDesc(crewId, "ASSIGNED");
 
-        List<SpecialPickup> combined = new ArrayList<>();
-        combined.addAll(scheduled);
-        combined.addAll(approved);
-        combined.addAll(inProgress);
-        return combined.stream().map(this::mapToResponse).toList();
+        List<SpecialPickup> all = new ArrayList<>();
+        all.addAll(a); all.addAll(b); all.addAll(c);all.addAll(d);
+        return all.stream().map(this::mapToResponse).toList();
     }
 
     @Override
     public SpecialPickupResponse assignToCrew(String pickupId, String crewId) {
         SpecialPickup pickup = pickupRepository.findById(pickupId)
-                .orElseThrow(() ->
-                        new ResponseStatusException(HttpStatus.NOT_FOUND, "Pickup not found with id: " + pickupId));
-
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pickup not found with id: " + pickupId));
         pickup.setAssignedCrewId(crewId);
         if ("SCHEDULED".equals(pickup.getStatus())) {
-            pickup.setStatus("IN_PROGRESS"); // legacy behavior for manual assign
+            pickup.setStatus("IN_PROGRESS");
         }
         pickup.setUpdatedAt(LocalDateTime.now());
         return mapToResponse(pickupRepository.save(pickup));
     }
 
-    /** Atomic Approval + Assignment + Add Outstanding Charge */
     @Override
     @Transactional
     public SpecialPickupResponse approveAndAssign(String pickupId, ApproveAssignRequest req, String approverId) {
@@ -234,32 +208,30 @@ public class SpecialPickupServiceImpl implements SpecialPickupService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "price must be > 0");
         }
 
-        // Approve + assign
         pickup.setAssignedCrewId(req.getCrewId());
-        pickup.setStatus("APPROVED");
+        pickup.setStatus("ASSIGNED");
         pickup.setNotes(req.getNotes());
         pickup.setPrice(req.getPrice());
         pickup.setUpdatedAt(LocalDateTime.now());
         pickupRepository.save(pickup);
 
-        // Add outstanding charge for resident
+        // Charge now so outstanding appears immediately for payment
         String residentId = pickup.getUserId();
         String reference = "SP-" + pickup.getId();
-
-        // If your PaymentService exposes addOutstanding(...) instead, use that.
         paymentService.addCharge(residentId, req.getPrice(), reference);
 
         return mapToResponse(pickup);
     }
 
-    /* ---------- helpers ---------- */
+    /* helpers */
 
     private boolean isTransitionAllowed(String from, String to) {
         if (from == null || to == null) return false;
         if (from.equals(to)) return true;
         return switch (from) {
-            case "SCHEDULED"   -> List.of("APPROVED", "CANCELLED", "IN_PROGRESS").contains(to);
+            case "SCHEDULED"   -> List.of("ASSIGNED","APPROVED", "CANCELLED", "IN_PROGRESS").contains(to);
             case "APPROVED"    -> List.of("IN_PROGRESS", "CANCELLED", "COMPLETED").contains(to);
+            case "ASSIGNED"    -> List.of("IN_PROGRESS", "CANCELLED", "COMPLETED").contains(to);
             case "IN_PROGRESS" -> List.of("COMPLETED", "CANCELLED").contains(to);
             case "COMPLETED", "CANCELLED" -> false;
             default -> false;
@@ -279,25 +251,25 @@ public class SpecialPickupServiceImpl implements SpecialPickupService {
         };
     }
 
-    private SpecialPickupResponse mapToResponse(SpecialPickup pickup) {
+    private SpecialPickupResponse mapToResponse(SpecialPickup p) {
         SpecialPickupResponse r = new SpecialPickupResponse();
-        r.setId(pickup.getId());
-        r.setUserId(pickup.getUserId());
-        r.setWasteType(pickup.getWasteType());
-        r.setPickupDate(pickup.getPickupDate());
-        r.setPickupTime(pickup.getPickupTime());
-        r.setDescription(pickup.getDescription());
-        r.setLocation(pickup.getLocation());
-        r.setSpecialInstructions(pickup.getSpecialInstructions());
-        r.setUrgency(pickup.getUrgency());
-        r.setPhotoUrls(pickup.getPhotoUrls());
-        r.setPrice(pickup.getPrice());
-        r.setStatus(pickup.getStatus());
-        r.setPickupId(pickup.getPickupId());
-        r.setCreatedAt(pickup.getCreatedAt());
-        r.setUpdatedAt(pickup.getUpdatedAt());
-        r.setAssignedCrewId(pickup.getAssignedCrewId());
-        r.setNotes(pickup.getNotes());
+        r.setId(p.getId());
+        r.setUserId(p.getUserId());
+        r.setWasteType(p.getWasteType());
+        r.setPickupDate(p.getPickupDate());
+        r.setPickupTime(p.getPickupTime());
+        r.setDescription(p.getDescription());
+        r.setLocation(p.getLocation());
+        r.setSpecialInstructions(p.getSpecialInstructions());
+        r.setUrgency(p.getUrgency());
+        r.setPhotoUrls(p.getPhotoUrls());
+        r.setPrice(p.getPrice());
+        r.setStatus(p.getStatus());
+        r.setPickupId(p.getPickupId());
+        r.setCreatedAt(p.getCreatedAt());
+        r.setUpdatedAt(p.getUpdatedAt());
+        r.setAssignedCrewId(p.getAssignedCrewId());
+        r.setNotes(p.getNotes());
         return r;
     }
 }

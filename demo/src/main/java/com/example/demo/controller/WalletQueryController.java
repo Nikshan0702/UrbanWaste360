@@ -1,4 +1,3 @@
-// src/main/java/com/example/demo/controller/WalletQueryController.java
 package com.example.demo.controller;
 
 import java.util.Map;

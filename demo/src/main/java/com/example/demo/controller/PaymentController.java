@@ -1,4 +1,3 @@
-// src/main/java/com/example/demo/controller/PaymentController.java
 package com.example.demo.controller;
 
 import java.security.Principal;
@@ -38,55 +37,38 @@ public class PaymentController {
         this.userRepository = userRepository;
     }
 
-    /** Resolve resident id from Principal in secure mode; otherwise require explicit residentId. */
     private String resolveResidentId(Principal principal, String residentIdFromRequestOrPath) {
         if (securityEnabled) {
-            if (principal == null)
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
+            if (principal == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
             return userRepository.findByEmail(principal.getName())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,"User not found"))
                     .getId();
         } else {
             if (residentIdFromRequestOrPath == null || residentIdFromRequestOrPath.isBlank())
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "residentId is required when security is disabled");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "residentId is required when security is disabled");
             return residentIdFromRequestOrPath;
         }
     }
 
-    /* -------------------- Wallet -------------------- */
-
-    // New: matches your frontend call /api/payments/wallet?residentId=...
     @GetMapping("/wallet")
-    public Map<String,Object> walletMe(Principal principal,
-                                       @RequestParam(required = false) String residentId){
+    public Map<String,Object> walletMe(Principal principal, @RequestParam(required = false) String residentId){
         String rid = resolveResidentId(principal, residentId);
-        double balance = paymentService.getWalletBalance(rid);
-        return Map.of("balance", balance);
+        return Map.of("balance", paymentService.getWalletBalance(rid));
     }
 
-    // Kept for backward compatibility: /api/payments/wallet/{id}
     @GetMapping("/wallet/{id}")
-    public Map<String,Object> walletByPath(Principal principal,
-                                           @PathVariable("id") String id,
+    public Map<String,Object> walletByPath(Principal principal, @PathVariable("id") String id,
                                            @RequestParam(required = false) String residentId){
-        // In secure mode, principal wins; in dev mode we allow residentId or path id
         String rid = resolveResidentId(principal, securityEnabled ? id : (residentId != null ? residentId : id));
-        double balance = paymentService.getWalletBalance(rid);
-        return Map.of("balance", balance);
+        return Map.of("balance", paymentService.getWalletBalance(rid));
     }
-
-    /* -------------------- History -------------------- */
 
     @GetMapping("/history/{id}")
-    public List<Payment> history(Principal principal,
-                                 @PathVariable("id") String id,
+    public List<Payment> history(Principal principal, @PathVariable("id") String id,
                                  @RequestParam(required = false) String residentId){
         String rid = resolveResidentId(principal, securityEnabled ? id : (residentId != null ? residentId : id));
         return paymentService.getHistory(rid);
     }
-
-    /* -------------------- Settle & Outstanding -------------------- */
 
     @PostMapping("/settle")
     public Map<String,Object> settle(Principal principal,
@@ -94,12 +76,11 @@ public class PaymentController {
                                      @RequestBody SettlePaymentRequestDTO dto){
         String rid = resolveResidentId(principal, residentId);
 
-        if (dto.getAmount() <= 0)
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"amount must be > 0");
+        if (dto.getAmount() <= 0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"amount must be > 0");
         if (!"WALLET".equalsIgnoreCase(dto.getMethod()) && !"CARD".equalsIgnoreCase(dto.getMethod()))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"method must be WALLET or CARD");
-        if ("CARD".equalsIgnoreCase(dto.getMethod()) &&
-            (dto.getCardToken() == null || dto.getCardToken().isBlank())) {
+        if ("CARD".equalsIgnoreCase(dto.getMethod())
+                && (dto.getCardToken() == null || dto.getCardToken().isBlank())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "cardToken required for CARD payments");
         }
 
@@ -108,8 +89,7 @@ public class PaymentController {
     }
 
     @GetMapping("/outstanding")
-    public Map<String,Object> outstanding(Principal principal,
-                                          @RequestParam(required = false) String residentId){
+    public Map<String,Object> outstanding(Principal principal, @RequestParam(required = false) String residentId){
         String rid = resolveResidentId(principal, residentId);
         return Map.of("outstanding", paymentService.getOutstanding(rid));
     }

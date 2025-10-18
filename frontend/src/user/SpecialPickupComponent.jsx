@@ -107,49 +107,49 @@ const SpecialPickupComponent = ({ userData }) => {
   // Status flow with descriptions
   const statusFlow = [
     { 
-      status: 'pending', 
+      status: 'PENDING', 
       icon: FaClock, 
       color: 'bg-yellow-100 text-yellow-800',
       description: 'Waiting for admin approval',
       message: 'Your pickup request is pending approval from admin.'
     },
     { 
-      status: 'approved', 
+      status: 'APPROVED', 
       icon: FaUserCheck, 
       color: 'bg-blue-100 text-blue-800',
       description: 'Approved by admin',
       message: 'Your pickup has been approved and will be assigned to a collector soon.'
     },
     { 
-      status: 'rejected', 
+      status: 'REJECTED', 
       icon: FaTimesCircle, 
       color: 'bg-red-100 text-red-800',
       description: 'Rejected by admin',
       message: 'Your pickup request has been rejected.'
     },
     { 
-      status: 'assigned', 
+      status: 'ASSIGNED', 
       icon: FaTruck, 
       color: 'bg-purple-100 text-purple-800',
       description: 'Assigned to collector',
       message: 'A collector has been assigned to your pickup.'
     },
     { 
-      status: 'in_progress', 
+      status: 'IN_PROGRESS', 
       icon: FaTruck, 
       color: 'bg-orange-100 text-orange-800',
       description: 'Collection in progress',
       message: 'Collector is on the way to pickup your items.'
     },
     { 
-      status: 'completed', 
+      status: 'COMPLETED', 
       icon: FaCheckCircle, 
       color: 'bg-green-100 text-green-800',
       description: 'Successfully collected',
       message: 'Your items have been successfully collected.'
     },
     { 
-      status: 'cancelled', 
+      status: 'CANCELLED', 
       icon: FaTimesCircle, 
       color: 'bg-gray-100 text-gray-800',
       description: 'Cancelled',

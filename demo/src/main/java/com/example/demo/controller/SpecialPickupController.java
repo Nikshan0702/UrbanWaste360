@@ -92,7 +92,7 @@ public class SpecialPickupController {
         return ResponseEntity.ok(statistics);
     }
 
-    @GetMapping("/crew/{crewId}")
+    @GetMapping("/collector/{crewId}")
     public ResponseEntity<List<SpecialPickupResponse>> getCrewAssignedPickups(@PathVariable String crewId) {
         List<SpecialPickupResponse> pickups = pickupService.getCrewAssignedPickups(crewId);
         return ResponseEntity.ok(pickups);

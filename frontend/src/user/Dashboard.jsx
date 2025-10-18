@@ -351,29 +351,44 @@ const Dashboard = () => {
   };
 
   // Payment and wallet functions
-  const fetchWalletBalance = async () => {
-    try {
-      const token = localStorage.getItem('authToken');
-      const userData = JSON.parse(localStorage.getItem('userData'));
-      
-      if (!userData?.id) return;
-
-      const response = await fetch(`http://localhost:8080/api/payments/wallet/${userData.id}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const walletData = await response.json();
-        setWalletBalance(walletData.balance || 0);
-      }
-    } catch (error) {
-      console.error('Error fetching wallet balance:', error);
+  // Enhanced wallet balance fetching
+const fetchWalletBalance = async () => {
+  try {
+    const token = localStorage.getItem('authToken');
+    const userData = JSON.parse(localStorage.getItem('userData'));
+    
+    if (!userData?.id) {
+      console.log('❌ No user ID found for wallet balance');
+      return;
     }
-  };
+
+    console.log('🔄 Fetching wallet balance for user:', userData.id);
+    
+    const response = await fetch(`http://localhost:8080/api/payments/wallet/${userData.id}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    console.log('💰 Wallet balance response status:', response.status);
+    
+    if (response.ok) {
+      const walletData = await response.json();
+      console.log('💰 Wallet data received:', walletData);
+      const balance = walletData.balance || 0;
+      setWalletBalance(balance);
+      console.log('💰 Wallet balance updated to:', balance);
+    } else {
+      console.error('❌ Failed to fetch wallet balance:', response.status);
+      const errorText = await response.text();
+      console.error('❌ Error details:', errorText);
+    }
+  } catch (error) {
+    console.error('❌ Error fetching wallet balance:', error);
+  }
+};
 
   const fetchPaymentHistory = async () => {
     try {

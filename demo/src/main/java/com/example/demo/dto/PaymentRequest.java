@@ -1,13 +1,14 @@
 package com.example.demo.dto;
 
 import java.math.BigDecimal;
+
 import com.example.demo.model.PaymentMethod;
 
 public class PaymentRequest {
     private String userId;
     private BigDecimal amount;
     private PaymentMethod paymentMethod;
-    private CardDetails cardDetails; // Add this field
+    private CardDetails cardDetails; 
 
     // Constructors
     public PaymentRequest() {}

@@ -22,7 +22,7 @@ const CollectorSpecialPickupComponent = () => {
   const [assignedPickups, setAssignedPickups] = useState([]);
   const [filteredPickups, setFilteredPickups] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('assigned');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [selectedPickup, setSelectedPickup] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
 
@@ -36,11 +36,22 @@ const CollectorSpecialPickupComponent = () => {
   ];
 
   const statusOptions = [
-    { value: 'assigned', label: 'Assigned' },
-    { value: 'in_progress', label: 'In Progress' },
-    { value: 'completed', label: 'Completed' },
-    { value: 'cancelled', label: 'Cancelled' }
+    { value: 'all', label: 'All Status' },
+    { value: 'SCHEDULED', label: 'Scheduled' },
+    { value: 'ASSIGNED', label: 'Assigned' },
+    { value: 'IN_PROGRESS', label: 'In Progress' },
+    { value: 'COMPLETED', label: 'Completed' },
+    { value: 'CANCELLED', label: 'Cancelled' }
   ];
+
+  // Status mapping from backend to frontend display
+  const statusDisplayMap = {
+    'SCHEDULED': 'Scheduled',
+    'ASSIGNED': 'Assigned',
+    'IN_PROGRESS': 'In Progress',
+    'COMPLETED': 'Completed',
+    'CANCELLED': 'Cancelled'
+  };
 
   useEffect(() => {
     fetchAssignedPickups();
@@ -51,39 +62,39 @@ const CollectorSpecialPickupComponent = () => {
   }, [assignedPickups, searchTerm, statusFilter]);
 
   const fetchAssignedPickups = async () => {
-  try {
-    setLoading(true);
-    const token = localStorage.getItem('authToken');
-    const userData = JSON.parse(localStorage.getItem('userData'));
-    
-    console.log('Collector ID:', userData?.id); // Debug
-    console.log('Token:', token); // Debug
-    
-    const response = await fetch(`http://localhost:8080/api/pickups/collector/${userData.id}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('authToken');
+      const userData = JSON.parse(localStorage.getItem('userData'));
+      
+      console.log('Collector ID:', userData?.id);
+      console.log('Token:', token);
+      
+      const response = await fetch(`http://localhost:8080/api/pickups/collector/${userData.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('Response status:', response.status);
+
+      if (response.ok) {
+        const pickups = await response.json();
+        console.log('Fetched pickups:', pickups);
+        setAssignedPickups(pickups);
+      } else {
+        const errorText = await response.text();
+        console.error('API Error:', errorText);
+        throw new Error('Failed to fetch assigned pickups');
       }
-    });
-
-    console.log('Response status:', response.status); // Debug
-
-    if (response.ok) {
-      const pickups = await response.json();
-      console.log('Fetched pickups:', pickups); // Debug
-      setAssignedPickups(pickups);
-    } else {
-      const errorText = await response.text();
-      console.error('API Error:', errorText); // Debug
-      throw new Error('Failed to fetch assigned pickups');
+    } catch (error) {
+      console.error('Error fetching pickups:', error);
+      setError('Failed to load assigned pickups: ' + error.message);
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('Error fetching pickups:', error);
-    setError('Failed to load assigned pickups: ' + error.message);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const filterPickups = () => {
     let filtered = assignedPickups;
@@ -111,25 +122,35 @@ const CollectorSpecialPickupComponent = () => {
       setLoading(true);
       const token = localStorage.getItem('authToken');
       
-      const response = await fetch(`http://localhost:8080/api/pickups/collector/${pickupId}/status`, {
+      console.log('Updating pickup:', pickupId, 'to status:', status);
+      
+      const response = await fetch(`http://localhost:8080/api/pickups/${pickupId}/status`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ status })
+        body: JSON.stringify({ 
+          status: status,
+          // Include other required fields if needed by your backend
+          notes: `Status changed to ${status} by collector`
+        })
       });
 
       if (response.ok) {
-        setSuccess(`Pickup status updated to ${status}`);
-        await fetchAssignedPickups();
+        const updatedPickup = await response.json();
+        console.log('Update successful:', updatedPickup);
+        setSuccess(`Pickup status updated to ${statusDisplayMap[status] || status}`);
+        await fetchAssignedPickups(); // Refresh the list
         setShowDetailsModal(false);
       } else {
-        throw new Error('Failed to update status');
+        const errorText = await response.text();
+        console.error('Update failed:', errorText);
+        throw new Error(`Failed to update status: ${errorText}`);
       }
     } catch (error) {
       console.error('Error updating status:', error);
-      setError('Failed to update pickup status');
+      setError('Failed to update pickup status: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -137,20 +158,25 @@ const CollectorSpecialPickupComponent = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'assigned': return 'bg-purple-100 text-purple-800';
-      case 'in_progress': return 'bg-orange-100 text-orange-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
+      case 'SCHEDULED': return 'bg-blue-100 text-blue-800';
+      case 'ASSIGNED': return 'bg-purple-100 text-purple-800';
+      case 'IN_PROGRESS': return 'bg-orange-100 text-orange-800';
+      case 'COMPLETED': return 'bg-green-100 text-green-800';
+      case 'CANCELLED': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return dateString;
+    }
   };
 
   const viewPickupDetails = (pickup) => {
@@ -160,12 +186,43 @@ const CollectorSpecialPickupComponent = () => {
 
   const canUpdateStatus = (currentStatus, newStatus) => {
     const allowedTransitions = {
-      'assigned': ['in_progress', 'cancelled'],
-      'in_progress': ['completed', 'cancelled'],
-      'completed': [],
-      'cancelled': []
+      'SCHEDULED': ['IN_PROGRESS', 'CANCELLED'],
+      'ASSIGNED': ['IN_PROGRESS', 'CANCELLED'],
+      'IN_PROGRESS': ['COMPLETED', 'CANCELLED'],
+      'COMPLETED': [],
+      'CANCELLED': []
     };
     return allowedTransitions[currentStatus]?.includes(newStatus);
+  };
+
+  const getAvailableStatusActions = (currentStatus) => {
+    const actions = [];
+    
+    if (canUpdateStatus(currentStatus, 'IN_PROGRESS')) {
+      actions.push({
+        status: 'IN_PROGRESS',
+        label: 'Start Collection',
+        color: 'bg-orange-600 hover:bg-orange-700'
+      });
+    }
+    
+    if (canUpdateStatus(currentStatus, 'COMPLETED')) {
+      actions.push({
+        status: 'COMPLETED',
+        label: 'Mark as Completed',
+        color: 'bg-green-600 hover:bg-green-700'
+      });
+    }
+    
+    if (canUpdateStatus(currentStatus, 'CANCELLED')) {
+      actions.push({
+        status: 'CANCELLED',
+        label: 'Cancel Pickup',
+        color: 'bg-red-600 hover:bg-red-700'
+      });
+    }
+    
+    return actions;
   };
 
   return (
@@ -209,7 +266,6 @@ const CollectorSpecialPickupComponent = () => {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
               >
-                <option value="all">All Status</option>
                 {statusOptions.map(option => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -221,10 +277,11 @@ const CollectorSpecialPickupComponent = () => {
             <div className="flex items-end">
               <button
                 onClick={fetchAssignedPickups}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                disabled={loading}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white py-2 px-4 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
               >
                 <FaFilter className="w-4 h-4" />
-                Refresh
+                {loading ? 'Refreshing...' : 'Refresh'}
               </button>
             </div>
           </div>
@@ -240,6 +297,7 @@ const CollectorSpecialPickupComponent = () => {
             filteredPickups.map((pickup) => {
               const wasteType = wasteTypes.find(w => w.id === pickup.wasteType);
               const IconComponent = wasteType?.icon || FaTrash;
+              const statusActions = getAvailableStatusActions(pickup.status);
               
               return (
                 <div key={pickup.id} className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
@@ -254,7 +312,7 @@ const CollectorSpecialPickupComponent = () => {
                       </div>
                     </div>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(pickup.status)}`}>
-                      {pickup.status}
+                      {statusDisplayMap[pickup.status] || pickup.status}
                     </span>
                   </div>
 
@@ -270,39 +328,34 @@ const CollectorSpecialPickupComponent = () => {
                     </div>
 
                     <div className="text-sm text-gray-600">
-                      <strong>User:</strong> {pickup.userId?.name}
+                      <strong>User:</strong> {pickup.userId?.name || 'N/A'}
                     </div>
 
                     <div className="text-sm text-gray-600">
-                      <strong>Price:</strong> LKR {pickup.price}
+                      <strong>Price:</strong> LKR {pickup.price || '0'}
                     </div>
                   </div>
 
                   <div className="flex justify-between items-center">
                     <button
                       onClick={() => viewPickupDetails(pickup)}
-                      className="text-emerald-600 hover:text-emerald-800 font-medium text-sm"
+                      className="text-emerald-600 hover:text-emerald-800 font-medium text-sm flex items-center gap-1"
                     >
+                      <FaEye className="w-3 h-3" />
                       View Details
                     </button>
                     
                     <div className="flex gap-2">
-                      {canUpdateStatus(pickup.status, 'in_progress') && (
+                      {statusActions.map(action => (
                         <button
-                          onClick={() => updatePickupStatus(pickup.id, 'in_progress')}
-                          className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 rounded text-xs font-medium transition-colors"
+                          key={action.status}
+                          onClick={() => updatePickupStatus(pickup.id, action.status)}
+                          disabled={loading}
+                          className={`${action.color} text-white px-3 py-1 rounded text-xs font-medium transition-colors disabled:opacity-50`}
                         >
-                          Start
+                          {action.label}
                         </button>
-                      )}
-                      {canUpdateStatus(pickup.status, 'completed') && (
-                        <button
-                          onClick={() => updatePickupStatus(pickup.id, 'completed')}
-                          className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-medium transition-colors"
-                        >
-                          Complete
-                        </button>
-                      )}
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -312,6 +365,12 @@ const CollectorSpecialPickupComponent = () => {
             <div className="col-span-full text-center py-8">
               <FaCalendarAlt className="text-gray-400 text-3xl mx-auto mb-2" />
               <p className="text-gray-500">No assigned pickups found</p>
+              <button
+                onClick={fetchAssignedPickups}
+                className="mt-2 text-emerald-600 hover:text-emerald-800 font-medium"
+              >
+                Try refreshing
+              </button>
             </div>
           )}
         </div>
@@ -337,7 +396,7 @@ const CollectorSpecialPickupComponent = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700">User</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedPickup.userId?.name}</p>
+                      <p className="mt-1 text-sm text-gray-900">{selectedPickup.userId?.name || 'N/A'}</p>
                       {selectedPickup.userId?.phone && (
                         <div className="flex items-center gap-1 mt-1">
                           <FaPhone className="w-3 h-3 text-gray-400" />
@@ -348,7 +407,7 @@ const CollectorSpecialPickupComponent = () => {
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Waste Type</label>
                       <p className="mt-1 text-sm text-gray-900">
-                        {wasteTypes.find(w => w.id === selectedPickup.wasteType)?.name}
+                        {wasteTypes.find(w => w.id === selectedPickup.wasteType)?.name || selectedPickup.wasteType}
                       </p>
                     </div>
                   </div>
@@ -364,7 +423,7 @@ const CollectorSpecialPickupComponent = () => {
                       <label className="block text-sm font-medium text-gray-700">Status</label>
                       <p className="mt-1">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedPickup.status)}`}>
-                          {selectedPickup.status}
+                          {statusDisplayMap[selectedPickup.status] || selectedPickup.status}
                         </span>
                       </p>
                     </div>
@@ -372,7 +431,7 @@ const CollectorSpecialPickupComponent = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Description</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedPickup.description}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedPickup.description || 'No description provided'}</p>
                   </div>
 
                   <div>
@@ -390,32 +449,26 @@ const CollectorSpecialPickupComponent = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Urgency</label>
-                      <p className="mt-1 text-sm text-gray-900 capitalize">{selectedPickup.urgency}</p>
+                      <p className="mt-1 text-sm text-gray-900 capitalize">{selectedPickup.urgency || 'standard'}</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Price</label>
-                      <p className="mt-1 text-sm text-gray-900">LKR {selectedPickup.price}</p>
+                      <p className="mt-1 text-sm text-gray-900">LKR {selectedPickup.price || '0'}</p>
                     </div>
                   </div>
 
                   {/* Action Buttons */}
                   <div className="flex justify-end space-x-3 pt-4 border-t">
-                    {canUpdateStatus(selectedPickup.status, 'in_progress') && (
+                    {getAvailableStatusActions(selectedPickup.status).map(action => (
                       <button
-                        onClick={() => updatePickupStatus(selectedPickup.id, 'in_progress')}
-                        className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
+                        key={action.status}
+                        onClick={() => updatePickupStatus(selectedPickup.id, action.status)}
+                        disabled={loading}
+                        className={`${action.color} text-white px-4 py-2 rounded-lg font-semibold transition-colors disabled:opacity-50`}
                       >
-                        Start Collection
+                        {action.label}
                       </button>
-                    )}
-                    {canUpdateStatus(selectedPickup.status, 'completed') && (
-                      <button
-                        onClick={() => updatePickupStatus(selectedPickup.id, 'completed')}
-                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
-                      >
-                        Mark as Completed
-                      </button>
-                    )}
+                    ))}
                     <button
                       onClick={() => setShowDetailsModal(false)}
                       className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
@@ -431,19 +484,31 @@ const CollectorSpecialPickupComponent = () => {
 
         {/* Error/Success Messages */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-6">
+          <div className="fixed top-4 right-4 bg-red-50 border border-red-200 rounded-lg p-4 z-50 max-w-md">
             <div className="flex items-center">
               <FaExclamationTriangle className="text-red-400 mr-2" />
               <p className="text-red-700">{error}</p>
+              <button
+                onClick={() => setError('')}
+                className="ml-2 text-red-400 hover:text-red-600"
+              >
+                <FaTimesCircle className="w-4 h-4" />
+              </button>
             </div>
           </div>
         )}
 
         {success && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-6">
+          <div className="fixed top-4 right-4 bg-green-50 border border-green-200 rounded-lg p-4 z-50 max-w-md">
             <div className="flex items-center">
               <FaCheckCircle className="text-green-400 mr-2" />
               <p className="text-green-700">{success}</p>
+              <button
+                onClick={() => setSuccess('')}
+                className="ml-2 text-green-400 hover:text-green-600"
+              >
+                <FaTimesCircle className="w-4 h-4" />
+              </button>
             </div>
           </div>
         )}
