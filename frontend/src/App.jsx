@@ -12,11 +12,14 @@ import CollecterDashBoard from './Collecter/Collectiondashboard';
 import NearbyBins from './Collecter/NearbyBinsComponent';
 import CollectionRecords from './Collecter/CollectionRecords';
 import Bin from './Collecter/Bin';
+import AdminDashboard from './payment/AdminDashboard';
+import { Toaster } from 'react-hot-toast';
+
 
 function App() {
   return (
     <BrowserRouter>
-    
+          <Toaster position="top-center" />
           <Routes>
           <Route path="/Authentication" element={<Authentication />} />
           <Route path="/Dashboard" element={<Dashboard />} />
@@ -31,6 +34,7 @@ function App() {
           <Route path="/NearbyBins" element={<NearbyBins />} />    
           <Route path="/CollectionRecords" element={<CollectionRecords />} /> 
           <Route path="/Bin" element={<Bin />} />        
+          <Route path="/AdminDashboard" element={<AdminDashboard />} />   
 
           <Route path="*" element={<div className="p-10">404 Not Found</div>} />
           </Routes>
