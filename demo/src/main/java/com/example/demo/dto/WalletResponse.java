@@ -1,24 +1,27 @@
+// src/main/java/com/example/demo/dto/WalletResponse.java
 package com.example.demo.dto;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public class WalletResponse {
     private String userId;
     private BigDecimal balance;
     private String currency;
-    private LocalDateTime lastUpdated;
+    private Instant updatedAt;
 
+    // No-args constructor (needed by Jackson)
     public WalletResponse() {}
 
-    public WalletResponse(String userId, BigDecimal balance, String currency, LocalDateTime lastUpdated) {
+    // All-args constructor – this is what WalletServiceImpl expects
+    public WalletResponse(String userId, BigDecimal balance, String currency, Instant updatedAt) {
         this.userId = userId;
         this.balance = balance;
         this.currency = currency;
-        this.lastUpdated = lastUpdated;
+        this.updatedAt = updatedAt;
     }
 
-    // Getters and Setters
+    // Getters & setters
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
 
@@ -28,6 +31,6 @@ public class WalletResponse {
     public String getCurrency() { return currency; }
     public void setCurrency(String currency) { this.currency = currency; }
 
-    public LocalDateTime getLastUpdated() { return lastUpdated; }
-    public void setLastUpdated(LocalDateTime lastUpdated) { this.lastUpdated = lastUpdated; }
+    public Instant getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
 }

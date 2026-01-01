@@ -4,6 +4,7 @@ import ZoneSelection from './ZoneSelectionPage';
 import NearbyBinsComponent from './NearbyBinsComponent';
 import CollectionRecords from './CollectionRecords';
 import FeedbackIssuesComponent from './FeedbackIssuesComponent';
+import CollectorSpecialPickupComponent from './CollectorSpecialPickup';
 import { 
   FaRecycle, 
   FaTrash, 
@@ -12,7 +13,9 @@ import {
   FaChartLine,
   FaCalendarAlt,
   FaHistory,
-  FaExclamationTriangle
+  FaExclamationTriangle,
+  FaTruck,
+  FaCheckCircle
 } from 'react-icons/fa';
 
 const Dashboard = () => {
@@ -27,6 +30,11 @@ const Dashboard = () => {
   const [routesData, setRoutesData] = useState([]);
 
   const [userId, setUserId] = useState('user123');
+  const [specialPickupStats, setSpecialPickupStats] = useState({
+    assigned: 0,
+    in_progress: 0,
+    completed: 0
+  });
 
   useEffect(() => {
     fetchUserData();
@@ -34,6 +42,13 @@ const Dashboard = () => {
     fetchCollectionData();
     fetchRoutesData();
   }, []);
+
+  // Load special pickup stats when user data is available and user is collector
+  useEffect(() => {
+    if (userData && userData.role === 'collector') {
+      loadSpecialPickupStats();
+    }
+  }, [userData]);
 
   const fetchUserData = async () => {
     try {
@@ -102,10 +117,49 @@ const Dashboard = () => {
     }
   };
 
+  const loadSpecialPickupStats = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('http://localhost:8080/api/pickups/statistics', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const stats = await response.json();
+        setSpecialPickupStats({
+          assigned: stats.assignedPickups || 0,
+          in_progress: stats.inProgressPickups || 0,
+          completed: stats.completedPickups || 0
+        });
+      }
+    } catch (error) {
+      console.error('Error loading special pickup stats:', error);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('userData');
     navigate('/');
+  };
+
+  // KPI Component for displaying statistics
+  const KPI = ({ label, value, tone = 'blue' }) => {
+    const colors = {
+      blue: 'text-blue-700',
+      emerald: 'text-emerald-700',
+      orange: 'text-orange-700',
+      gray: 'text-gray-900',
+    };
+    return (
+      <div className="bg-white border border-gray-100 rounded-xl p-4">
+        <div className="text-sm text-gray-600">{label}</div>
+        <div className={`text-2xl font-bold ${colors[tone] || colors.gray}`}>{value}</div>
+      </div>
+    );
   };
 
   const renderContent = () => {
@@ -119,6 +173,7 @@ const Dashboard = () => {
     }
 
     const displayData = userData || JSON.parse(localStorage.getItem('userData') || 'null');
+    const isCollector = displayData?.role === 'collector';
 
     switch (activeTab) {
       case 'dashboard':
@@ -129,12 +184,36 @@ const Dashboard = () => {
                 Welcome back, {displayData.name || 'User'}!
               </h1>
               <p className="text-gray-600">
-                {displayData.role === 'collector' 
+                {isCollector 
                   ? 'Waste Collection Staff Dashboard' 
                   : 'Smart Waste Management Dashboard'
                 }
               </p>
             </div>
+
+            {/* Special Pickup Stats for Collectors */}
+            {isCollector && (
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <FaTruck className="text-blue-600" />
+                  Special Pickup Overview
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <KPI label="Assigned Pickups" value={specialPickupStats.assigned} tone="blue" />
+                  <KPI label="In Progress" value={specialPickupStats.in_progress} tone="orange" />
+                  <KPI label="Completed" value={specialPickupStats.completed} tone="emerald" />
+                </div>
+                <div className="mt-4">
+                  <button 
+                    onClick={() => setActiveTab('special-pickups')}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2"
+                  >
+                    <FaCheckCircle className="w-4 h-4" />
+                    Manage Special Pickups
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-xl font-semibold mb-4">Your Profile Information</h2>
@@ -159,6 +238,12 @@ const Dashboard = () => {
                   <label className="block text-sm font-medium text-gray-700">Address</label>
                   <p className="mt-1 text-lg font-semibold">{displayData.address || 'Not provided'}</p>
                 </div>
+                {isCollector && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Collector ID</label>
+                    <p className="mt-1 text-lg font-semibold">{displayData.id}</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -182,6 +267,22 @@ const Dashboard = () => {
       case 'feedback-issues':
         return (
           <FeedbackIssuesComponent userData={userData} />
+        );
+
+      case 'special-pickups':
+        if (!isCollector) {
+          return (
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="text-center py-8">
+                <FaTruck className="text-gray-400 text-5xl mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">Access Restricted</h3>
+                <p className="text-gray-500">Special pickup management is only available for collection staff.</p>
+              </div>
+            </div>
+          );
+        }
+        return (
+          <CollectorSpecialPickupComponent />
         );
 
       case 'profile':
@@ -222,6 +323,15 @@ const Dashboard = () => {
                   <p className="text-lg font-semibold">{displayData.address || 'Not provided'}</p>
                 </div>
               </div>
+
+              {isCollector && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Collector ID</label>
+                  <div className="p-3 bg-gray-50 rounded border">
+                    <p className="text-lg font-semibold">{displayData.id}</p>
+                  </div>
+                </div>
+              )}
 
               {error && (
                 <div className="p-4 bg-yellow-50 border border-yellow-200 rounded">
@@ -284,6 +394,7 @@ const Dashboard = () => {
                 { id: 'collection', label: 'Record Collection', icon: FaHistory },
                 { id: 'routes', label: 'Routes', icon: FaCalendarAlt },
                 ...(userData?.role === 'collector' ? [
+                  { id: 'special-pickups', label: 'Special Pickups', icon: FaTruck },
                   { id: 'feedback-issues', label: 'Feedback & Issues', icon: FaExclamationTriangle }
                 ] : []),
                 { id: 'profile', label: 'Profile', icon: FaUser }

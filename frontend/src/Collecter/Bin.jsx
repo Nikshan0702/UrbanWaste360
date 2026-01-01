@@ -10,6 +10,7 @@ function Bin() {
     assignedCollectorId: "COL001",
   });
   const [editBin, setEditBin] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(""); // Added state for success message
 
   // Fetch all bins
   useEffect(() => {
@@ -35,6 +36,10 @@ function Bin() {
           status: "",
           assignedCollectorId: "",
         });
+        setSuccessMessage("Bin created successfully!"); // Set success message
+        setTimeout(() => {
+          setSuccessMessage(""); // Clear the success message after 3 seconds
+        }, 3000);
       })
       .catch((error) => {
         console.error("Error creating bin", error);
@@ -76,6 +81,13 @@ function Bin() {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6 text-center">Bin Management</h1>
+
+      {/* Success Message */}
+      {successMessage && (
+        <div className="bg-green-500 text-white p-4 rounded-md mb-6 text-center">
+          {successMessage}
+        </div>
+      )}
 
       {/* Bin Creation Form */}
       <div className="bg-white p-6 rounded-lg shadow-lg mb-6">
