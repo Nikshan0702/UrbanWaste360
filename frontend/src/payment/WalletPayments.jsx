@@ -235,7 +235,16 @@ export default function WalletPayments() {
             </div>
           </div>
 
-         
+          <div className="rounded-2xl text-white p-6 bg-gradient-to-br from-green-600 to-green-700 shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-white/80 text-sm">Payable Amount</p>
+                <p className="text-3xl font-bold mt-2">LKR {totalPayments.toFixed(2)}</p>
+              </div>
+              <FaMoneyBillWave className="text-4xl opacity-90" />
+            </div>
+          </div>
+
           <div className="rounded-2xl text-white p-6 bg-gradient-to-br from-indigo-600 to-indigo-700 shadow">
             <div className="flex items-center justify-between">
               <div>

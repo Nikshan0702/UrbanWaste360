@@ -24,6 +24,7 @@ import com.example.demo.ports.PaymentService;
 import com.example.demo.repository.SpecialPickupRepository;
 import com.example.demo.service.SpecialPickupService;
 
+
 @Service
 public class SpecialPickupServiceImpl implements SpecialPickupService {
 
@@ -106,26 +107,48 @@ public class SpecialPickupServiceImpl implements SpecialPickupService {
     }
 
     @Override
-    public SpecialPickupResponse updatePickupStatus(String id, PickupStatusUpdateRequest request) {
-        SpecialPickup pickup = pickupRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pickup not found with id: " + id));
+public SpecialPickupResponse updatePickupStatus(String id, PickupStatusUpdateRequest request) {
+    SpecialPickup pickup = pickupRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pickup not found with id: " + id));
 
-        String target = normalizeStatus(request.getStatus());
-        String current = pickup.getStatus();
+    String target = normalizeStatus(request.getStatus());
+    String current = pickup.getStatus();
 
-        if (!isTransitionAllowed(current, target)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Invalid transition");
-        }
+    System.out.println("🔄 Status update - From: " + current + " To: " + target);
 
-        pickup.setStatus(target);
-        pickup.setNotes(request.getNotes());
-        if (request.getAssignedCrewId() != null && !request.getAssignedCrewId().isBlank()) {
-            pickup.setAssignedCrewId(request.getAssignedCrewId());
-        }
-        pickup.setUpdatedAt(LocalDateTime.now());
-
-        return mapToResponse(pickupRepository.save(pickup));
+    if (!isTransitionAllowed(current, target)) {
+        throw new ResponseStatusException(HttpStatus.CONFLICT, 
+            "Invalid status transition from " + current + " to " + target);
     }
+
+    // Store old status for comparison
+    String oldStatus = pickup.getStatus();
+    
+    pickup.setStatus(target);
+    pickup.setNotes(request.getNotes());
+    if (request.getAssignedCrewId() != null && !request.getAssignedCrewId().isBlank()) {
+        pickup.setAssignedCrewId(request.getAssignedCrewId());
+    }
+    pickup.setUpdatedAt(LocalDateTime.now());
+
+    SpecialPickup saved = pickupRepository.save(pickup);
+    
+    // Check if status changed to COMPLETED and add payment charge
+    if ("COMPLETED".equals(target) && !"COMPLETED".equals(oldStatus)) {
+        try {
+            String reference = "PICKUP-" + saved.getPickupId();
+            paymentService.addPayment(saved.getUserId(), saved.getPrice(), reference);
+            System.out.println("💰 Payment charge added for completed pickup: " + reference + ", Amount: " + saved.getPrice());
+        } catch (Exception e) {
+            System.err.println("❌ Failed to add payment charge for completed pickup: " + e.getMessage());
+            // Don't throw exception here to avoid breaking the status update
+        }
+    }
+    
+    System.out.println("✅ Status updated successfully to: " + saved.getStatus());
+    
+    return mapToResponse(saved);
+}
 
     @Override
     public SpecialPickupResponse cancelPickup(String id) {

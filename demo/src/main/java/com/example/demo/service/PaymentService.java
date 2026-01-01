@@ -14,4 +14,6 @@ public interface PaymentService {
     PaymentResponse processPayment(PaymentRequest request);
     WalletResponse getWalletBalance(String userId);
     List<PaymentHistoryResponse> getPaymentHistory(String userId);
+    void addToOutstanding(String residentId, double amount, String reference);
+    void addPayment(String residentId, double amount, String reference); 
 }

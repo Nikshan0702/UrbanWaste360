@@ -43,7 +43,6 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public List<Payment> getHistory(String residentId) {
-        // Avoid calling non-existent custom finders; load + filter
         List<Payment> all = paymentRepo.findAll();
         return all.stream()
                 .filter(p -> {
@@ -119,6 +118,41 @@ public class PaymentServiceImpl implements PaymentService {
         Outstanding o = outstandingRepo.findById(residentId).orElse(new Outstanding(residentId, 0.0));
         o.setAmount(o.getAmount() + amount);
         outstandingRepo.save(o);
+    }
+
+    @Override
+    @Transactional
+    public void addPayment(String residentId, double amount, String reference) {
+        System.out.println("💰 Adding payment charge - User: " + residentId + ", Amount: " + amount + ", Reference: " + reference);
+        
+        // 1) Add payment charge to payment history
+        Payment p = new Payment();
+
+        setIfExists(p, "setResidentId", String.class, residentId);
+        setIfExists(p, "setUserId", String.class, residentId);
+        setIfExists(p, "setAmount", BigDecimal.class, BigDecimal.valueOf(amount));
+        setIfExists(p, "setType", String.class, "CHARGE"); // This adds to outstanding
+
+        if (!setEnumIfExists(p, "setPaymentMethod", "com.example.demo.model.PaymentMethod", "SYSTEM")) {
+            setIfExists(p, "setPaymentMethod", String.class, "SYSTEM");
+        }
+
+        if (!setEnumIfExists(p, "setStatus", "com.example.demo.model.PaymentStatus", "COMPLETED")) {
+            setIfExists(p, "setStatus", String.class, "COMPLETED");
+        }
+
+        setIfExists(p, "setReference", String.class, reference);
+        setIfExists(p, "setNotes", String.class, "Completed pickup: " + reference);
+        setIfExists(p, "setCreatedAt", Instant.class, Instant.now());
+
+        paymentRepo.save(p);
+
+        // 2) Increase outstanding amount (this adds to total payment due)
+        Outstanding o = outstandingRepo.findById(residentId).orElse(new Outstanding(residentId, 0.0));
+        o.setAmount(o.getAmount() + amount);
+        outstandingRepo.save(o);
+        
+        System.out.println("✅ Payment charge added successfully. New outstanding amount: " + o.getAmount());
     }
 
     /* ------------------------ helpers ------------------------ */

@@ -116,4 +116,5 @@ public class SpecialPickupController {
         SpecialPickupResponse assignedPickup = pickupService.assignToCrew(id, crewId);
         return ResponseEntity.ok(assignedPickup);
     }
+    
 }
