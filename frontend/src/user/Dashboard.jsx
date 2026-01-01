@@ -25,9 +25,9 @@ import {
   FaEye,
   FaComment
 } from 'react-icons/fa';
-// import DashboardPage from '../track-monitor/pages/DashboardPage';
-// import WasteHistoryPage from '../track-monitor/pages/WasteHistoryPage';
-// import RecyclingCredits from '../track-monitor/pages/RecyclingCredits';
+import DashboardPage from '../track-monitor/pages/DashboardPage';
+import WasteHistoryPage from '../track-monitor/pages/WasteHistoryPage';
+import RecyclingCredits from '../track-monitor/pages/RecyclingCredits';
 import SpecialPickupComponent from './SpecialPickupComponent';
 
 const Dashboard = () => {
